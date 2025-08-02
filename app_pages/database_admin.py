@@ -20,7 +20,7 @@ def render_database_admin_page():
     st.markdown("*Comprehensive database management and testing interface*")
     
     # Authentication check
-    if 'user_role' not in st.session_state or st.session_state.user_role != 'admin':
+    if 'user' not in st.session_state or not st.session_state.user or st.session_state.user.role != 'admin':
         st.error("🚫 Access denied. Admin privileges required.")
         return
     
