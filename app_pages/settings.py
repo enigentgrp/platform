@@ -165,7 +165,7 @@ def _show_broker_configuration():
             broker_data.append({
                 "Name": broker.name,
                 "API URL": broker.api_url,
-                "Trading Fees": f"${broker.trading_fees:.2f}",
+                "Trading Fees": f"${broker.trading_fees_per_share:.2f}/share, ${broker.trading_fees_per_contract:.2f}/contract",
                 "Day Trade Limit": broker.day_trade_limit,
                 "Status": "Active" if broker.is_active else "Inactive"
             })
@@ -193,10 +193,17 @@ def _show_broker_configuration():
             )
         
         with col2:
-            trading_fees = st.number_input(
-                "Trading Fees ($)",
+            trading_fees_per_share = st.number_input(
+                "Trading Fees per Share ($)",
                 min_value=0.0,
                 value=0.0,
+                step=0.01
+            )
+            
+            trading_fees_per_contract = st.number_input(
+                "Trading Fees per Contract ($)",
+                min_value=0.0,
+                value=0.65,
                 step=0.01
             )
             
@@ -227,7 +234,7 @@ def _show_broker_configuration():
             if st.button("💾 Save Broker Configuration"):
                 _save_broker_configuration(
                     session, broker_name, api_url, api_key, api_secret,
-                    trading_fees, day_trade_limit, is_active
+                    trading_fees_per_share, trading_fees_per_contract, day_trade_limit, is_active
                 )
                 st.success(f"Broker {broker_name} configuration saved!")
                 st.rerun()
@@ -471,7 +478,7 @@ def _save_environment_variables(session, variables):
         raise e
 
 def _save_broker_configuration(session, name, api_url, api_key, api_secret, 
-                             trading_fees, day_trade_limit, is_active):
+                             trading_fees_per_share, trading_fees_per_contract, day_trade_limit, is_active):
     """Save broker configuration"""
     try:
         broker = session.query(BrokerageInfo).filter(
@@ -480,7 +487,8 @@ def _save_broker_configuration(session, name, api_url, api_key, api_secret,
         
         if broker:
             broker.api_url = api_url
-            broker.trading_fees = trading_fees
+            broker.trading_fees_per_share = trading_fees_per_share
+            broker.trading_fees_per_contract = trading_fees_per_contract
             broker.day_trade_limit = day_trade_limit
             broker.is_active = is_active
             if api_key:
@@ -493,7 +501,8 @@ def _save_broker_configuration(session, name, api_url, api_key, api_secret,
                 api_url=api_url,
                 api_key=api_key,
                 api_secret=api_secret,
-                trading_fees=trading_fees,
+                trading_fees_per_share=trading_fees_per_share,
+                trading_fees_per_contract=trading_fees_per_contract,
                 day_trade_limit=day_trade_limit,
                 is_active=is_active
             )
