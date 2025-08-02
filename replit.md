@@ -9,11 +9,15 @@ Preferred communication style: Simple, everyday language.
 # Recent Changes (August 2025)
 
 ## Major Technical Fixes (Latest - August 2025)
-- **Authentication System Restored**: Fixed admin login with proper salted password hashing (admin/admin123)
+- **Role-Based Access Control Implemented**: Proper permission system with three user levels
+  - Admin (admin/admin123): Full system access including admin panels and database management
+  - Trader (trader1/trader123): Trading access with portfolio management capabilities
+  - Viewer (viewer1/viewer123): Read-only access with restricted navigation and blocked trading functions
+- **Authentication System Restored**: Fixed admin login with proper salted password hashing
 - **Database Attribute Corrections**: Updated all TransactionLog references from `executed_at` to `transaction_date`
 - **Options Trading Fixed**: Resolved decimal/float type mixing errors in options pricing calculations
 - **Settings Page Broker Configuration**: Updated to use correct database fields (`trading_fees_per_share` and `trading_fees_per_contract`)
-- **Database Admin Access**: Clarified access requirements - admin role required after login
+- **Navigation Security**: Dynamic sidebar menu based on user roles with appropriate access restrictions
 
 ## Navigation System Improvements
 - Removed duplicate upper navigation caused by Streamlit's automatic pages/ directory detection
@@ -38,9 +42,13 @@ Preferred communication style: Simple, everyday language.
 - Portfolio insights and personalized action suggestions
 
 ## Application Status (Fully Operational)
-- ✅ Authentication system working with proper credentials
-- ✅ All major pages functional (Trading, Portfolio, Admin, Settings, AI Assistant)
+- ✅ Authentication system working with proper credentials and role-based access control
+- ✅ Three-tier user system: Admin (full access), Trader (trading enabled), Viewer (read-only)
+- ✅ All major pages functional with appropriate permission checks
 - ✅ Database Admin accessible to admin users with comprehensive interface
+- ✅ Trading page properly blocked for viewer accounts with clear access denial messages
+- ✅ Portfolio page shows read-only mode for viewers while maintaining full functionality for traders
+- ✅ Settings page dynamically adjusts tabs based on user role permissions
 - ✅ Options trading calculations fixed for decimal/float compatibility
 - ✅ Broker configuration supporting both stock and options trading fees
 - ✅ Complete database structure with priority system and technical indicators
