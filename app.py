@@ -64,6 +64,7 @@ def sidebar_navigation():
             "Dashboard": "📊",
             "Trading": "💹",
             "Portfolio": "💼",
+            "AI Assistant": "🤖",
             "Settings": "⚙️"
         }
         
@@ -168,6 +169,9 @@ def load_page_content(page_name):
     elif page_name == "Portfolio":
         from app_pages.portfolio import show_portfolio_page
         show_portfolio_page()
+    elif page_name == "AI Assistant":
+        from app_pages.ai_assistant import show_ai_assistant_page
+        show_ai_assistant_page()
     elif page_name == "Settings":
         from app_pages.settings import show_settings_page
         show_settings_page()
