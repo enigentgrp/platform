@@ -6,6 +6,27 @@ This is an algorithmic trading platform for stocks and stock options built with 
 
 Preferred communication style: Simple, everyday language.
 
+# Recent Changes (August 2025)
+
+## Navigation System Improvements
+- Removed duplicate upper navigation caused by Streamlit's automatic pages/ directory detection
+- Moved page files from pages/ to app_pages/ directory to prevent automatic navigation
+- Implemented clean sidebar navigation with radio buttons instead of selectbox
+- Fixed all deprecated styling warnings (applymap → map) across all pages
+
+## Database and Technical Fixes
+- Switched from PostgreSQL to SQLite for better stability and reduced connection issues
+- Added comprehensive sample data with 10 major stocks (AAPL, MSFT, TSLA, etc.) including realistic prices
+- Fixed options trading interface errors by handling null price values properly
+- Implemented manual technical indicator calculations to replace ta-lib dependency issues
+- Set all sample stocks with has_options=True and priority=1 for testing
+
+## Application Status
+- All navigation issues resolved - only sidebar navigation remains
+- Options trading interface functional with proper error handling
+- Database initialization includes admin user (admin/admin123) and sample market data
+- All deprecation warnings eliminated from the codebase
+
 # System Architecture
 
 ## Frontend Architecture
