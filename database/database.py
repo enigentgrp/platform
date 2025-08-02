@@ -5,8 +5,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 import sqlite3
 
-# Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///trading_platform.db")
+# Database configuration - Force SQLite for stability
+DATABASE_URL = "sqlite:///trading_platform.db"
 
 # Create engine
 if DATABASE_URL.startswith("sqlite"):

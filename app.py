@@ -124,8 +124,8 @@ def main_dashboard():
                     "Name": stock.name,
                     "Sector": stock.sector,
                     "Priority": stock.priority,
-                    "Last Price": f"${stock.last_price:.2f}" if stock.last_price else "N/A",
-                    "Change %": f"{stock.change_percent:.2f}%" if stock.change_percent else "N/A"
+                    "Last Price": f"${stock.last_price:.2f}" if stock.last_price is not None else "N/A",
+                    "Change %": f"{stock.change_percent:.2f}%" if stock.change_percent is not None else "N/A"
                 })
             
             df = pd.DataFrame(priority_data)
