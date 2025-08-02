@@ -59,16 +59,22 @@ def sidebar_navigation():
         st.sidebar.write(f"👤 Welcome, {user.username}")
         st.sidebar.write(f"🏷️ Role: {user.role}")
         
-        # Navigation menu
+        # Navigation menu based on user role
         pages = {
             "Dashboard": "📊",
-            "Trading": "💹",
             "Portfolio": "💼",
-            "AI Assistant": "🤖",
-            "Settings": "⚙️"
+            "AI Assistant": "🤖"
         }
         
-        # Add admin pages for admin users
+        # Add role-specific pages
+        if user.role in ['trader', 'admin']:
+            pages["Trading"] = "💹"
+            pages["Settings"] = "⚙️"
+        elif user.role == 'viewer':
+            # Viewers get limited settings (just profile)
+            pages["Settings"] = "⚙️"
+        
+        # Add admin-only pages
         if user.role == 'admin':
             pages["Admin"] = "🛠️"
             pages["Database Admin"] = "🗄️"

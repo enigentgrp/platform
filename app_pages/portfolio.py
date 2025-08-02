@@ -18,9 +18,14 @@ def show_portfolio_page():
     """Portfolio overview and analysis page"""
     st.title("💼 Portfolio Management")
     
-    # Check user permissions
-    if not check_permission(st.session_state.user, 'trader'):
-        st.error("You don't have permission to view portfolio data")
+    # Check user permissions - viewers can see portfolio but not trade
+    user = st.session_state.user
+    is_viewer = user.role == 'viewer'
+    
+    if is_viewer:
+        st.info("👁️ Viewing in read-only mode. Trading features are disabled for viewer accounts.")
+    elif not check_permission(user, 'trader'):
+        st.error("🚫 Access denied. Portfolio access requires trader privileges or higher.")
         return
     
     # Portfolio overview metrics

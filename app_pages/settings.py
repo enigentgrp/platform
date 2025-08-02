@@ -14,8 +14,10 @@ def show_settings_page():
     # Check user permissions
     user = st.session_state.user
     is_admin = user.role == 'admin'
+    is_trader = user.role == 'trader'
+    is_viewer = user.role == 'viewer'
     
-    # Settings tabs
+    # Settings tabs based on role
     if is_admin:
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "📊 Trading Settings", 
@@ -24,7 +26,13 @@ def show_settings_page():
             "🔧 System Settings",
             "👤 User Profile"
         ])
-    else:
+    elif is_trader:
+        tab1, tab2, tab3 = st.tabs([
+            "📊 Trading Settings",
+            "💰 Account Settings", 
+            "👤 User Profile"
+        ])
+    else:  # viewer
         tab1, tab2 = st.tabs(["💰 Account Settings", "👤 User Profile"])
         
         with tab1:
@@ -33,20 +41,27 @@ def show_settings_page():
             _show_user_profile()
         return
     
-    with tab1:
-        _show_trading_settings()
+    # Admin tabs
+    if is_admin:
+        with tab1:
+            _show_trading_settings()
+        with tab2:
+            _show_broker_configuration()
+        with tab3:
+            _show_account_settings()
+        with tab4:
+            _show_system_settings()
+        with tab5:
+            _show_user_profile()
     
-    with tab2:
-        _show_broker_configuration()
-    
-    with tab3:
-        _show_account_settings()
-    
-    with tab4:
-        _show_system_settings()
-    
-    with tab5:
-        _show_user_profile()
+    # Trader tabs
+    elif is_trader:
+        with tab1:
+            _show_trading_settings()
+        with tab2:
+            _show_account_settings()
+        with tab3:
+            _show_user_profile()
 
 def _show_trading_settings():
     """Show trading configuration settings"""

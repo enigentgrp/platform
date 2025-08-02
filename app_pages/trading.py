@@ -12,6 +12,13 @@ from utils.helpers import format_currency, format_percentage
 def show_trading_page():
     st.title("💹 Advanced Trading")
     
+    # Check user permissions - only traders and admins can access trading
+    from utils.auth import check_permission
+    if not check_permission(st.session_state.user, 'trader'):
+        st.error("🚫 Access denied. Trading privileges required.")
+        st.info("Viewers can only access Dashboard, Portfolio (read-only), and AI Assistant.")
+        return
+    
     # Trading controls
     col1, col2, col3 = st.columns([1, 1, 1])
     
