@@ -1,0 +1,67 @@
+Support different broker APIs in separate modules (start with RobinHood and alpaca) such that if the general program decides to sell an asset, a generic call to sell can be routed to the specific sell function for the API of the active broker per the environment variables.
+
+Evaluate the priority current price table. If no order exists for this ticker, and x periods (set in environment variables) have passed, and price has moved a greater percentage in the same direction each period then place a purchase order with less than x% (set in environment variables) of the available cash (rounded down). If all x periods exceed 2 standard deviations moving away from the moving average or all x periods are moving towards the moving average, then buy options (expiring the next Friday beyond today at the next strike price in the direction that the price is moving and that is being actively traded and The purchase represents no more than x% (set in environment variables) of the current volume of  options being traded). 
+
+If the price is rising, buy call options
+If the price is falling, buy put options
+
+If we already own options, continue to monitor the current price every x seconds. When two periods have passed where the price change has been slowing down, or a period has passed where the price has not changed or has reversed, sell the options if we meet the requirements for day trading, else purchase an offsetting call or put option to lock in our current gain, selling whichever option is losing money at the next days opening, and later selling the other option when it stops gaining.
+
+With each sale \ (purchase), 
+add to \ (subtract from) the brokerage account cash balance 
+Also, add each gain and subtract each loss from the total account balance 
+
+
+
+Robinhood 
+Alpaca
+Surmount
+Tradestation
+Fidelity 
+Schwab
+
+
+As major indices show a strong upward price trend, give more emphasis to call options.
+As stock prices make new highs or bounce up from levels of support, purchase call options, but only if the next level of expected resistance represents at least a 5% price increase in the call option.
+As price increases slow, stop or reverse to back test previous support levels, sell the call options, preferably as prices are still slowly increasing.
+If necessary to avoid day trading, lock in the current gains by purchasing an offsetting put option, then probably sell both the next day. (Immediately sell the one losing money, then later the one gaining money)
+
+As major indices show a strong downward price trend, give more emphasis to put options.
+Do the opposite for put options than what is described above for call options, but hold put options for a shorter time than we would for a call option.
+
+
+
+
+The Most Important Technical Indicators for Binary Options https://share.google/4zpXc8HUsY9JK1HRN
+
+Wilder's DMI (ADX)
+Wilder's directional movement indicators and average directional index (DI) are composed of three lines, namely ADX, DI+, and DI-,
+
+Pivot points are a technical analysis tool used by traders to determine potential support and resistance levels, that is, levels at which the price of an asset is likely to move upward or downward. They are calculated using the average of the high, low, and closing prices from earlier trading sessions.
+
+
+Commodity Channel Index (CCI)
+High values above +100 indicate the start of a solid upward trend. Values below the -100 line indicate the beginning of a strong downward trend
+CCI= (Price−MA) / (0.015×D)
+where:
+Price=asset’s current price
+MA=moving average of asset’s price
+D=normal deviation from moving average
+should be used with additional indicators such as oscillators.
+
+look for divergence between the CCI and price movement, which indicates potential reversals. If the price is making new highs but the CCI fails to surpass its previous highs, it could indicate a lack of momentum and a possible reversal.look for divergence between the CCI and price movement, which indicates potential reversals. If the price is making new highs but the CCI fails to surpass its previous highs, it could indicate a lack of momentum and a possible reversal.
+
+
+Stochastic Oscillator
+The crossover of %K and %D below indicates trade entry signals. Although a 14-day period is standard, binary option traders can use the time frames they need.
+
+%K=100( (C-L14) / (H14−L14) )
+%D=3 period moving average of %K
+where:
+C=most recent closing price
+L14=low of 14 previous trading sessions
+H14=highest price traded during same 14-day period
+Levels above 80 indicate the assets are overbought, while those below 20 indicate they are oversold.
+
+
+
