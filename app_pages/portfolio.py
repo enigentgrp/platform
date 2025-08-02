@@ -216,7 +216,7 @@ def _show_performance_analysis():
     
     try:
         # Get transaction history for performance calculation
-        transactions = session.query(TransactionLog).order_by(TransactionLog.executed_at).all()
+        transactions = session.query(TransactionLog).order_by(TransactionLog.transaction_date).all()
         
         if not transactions:
             st.info("No transaction history available for performance analysis")
@@ -263,7 +263,7 @@ def _calculate_daily_returns(transactions):
     daily_pnl = {}
     
     for transaction in transactions:
-        date = transaction.executed_at.date()
+        date = transaction.transaction_date.date()
         
         if date not in daily_pnl:
             daily_pnl[date] = 0
@@ -432,8 +432,8 @@ def _show_transaction_history():
         
         # Query transactions
         query = session.query(TransactionLog).filter(
-            TransactionLog.executed_at >= datetime.combine(start_date, datetime.min.time()),
-            TransactionLog.executed_at <= datetime.combine(end_date, datetime.max.time())
+            TransactionLog.transaction_date >= datetime.combine(start_date, datetime.min.time()),
+            TransactionLog.transaction_date <= datetime.combine(end_date, datetime.max.time())
         )
         
         # Apply filters
@@ -446,7 +446,7 @@ def _show_transaction_history():
         elif transaction_type == "Sell Only":
             query = query.filter(TransactionLog.side == 'sell')
         
-        transactions = query.order_by(TransactionLog.executed_at.desc()).all()
+        transactions = query.order_by(TransactionLog.transaction_date.desc()).all()
         
         if transactions:
             # Prepare transaction data
@@ -462,7 +462,7 @@ def _show_transaction_history():
                         asset_info += f" {tx.expiration_date.strftime('%m/%d/%y')}"
                 
                 transaction_data.append({
-                    "Date": tx.executed_at.strftime("%Y-%m-%d %H:%M"),
+                    "Date": tx.transaction_date.strftime("%Y-%m-%d %H:%M"),
                     "Asset": asset_info,
                     "Side": tx.side.upper(),
                     "Quantity": tx.quantity,

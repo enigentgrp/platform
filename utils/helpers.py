@@ -70,8 +70,8 @@ def calculate_lifo_pnl(transactions: List[TransactionLog], current_price: float)
             sells.append(transaction)
     
     # Sort transactions by date
-    buys.sort(key=lambda x: x.executed_at, reverse=True)  # LIFO - most recent first
-    sells.sort(key=lambda x: x.executed_at)
+    buys.sort(key=lambda x: x.transaction_date, reverse=True)  # LIFO - most recent first
+    sells.sort(key=lambda x: x.transaction_date)
     
     realized_pnl = 0.0
     unrealized_pnl = 0.0
@@ -200,12 +200,12 @@ def calculate_day_trade_count(transactions: List[TransactionLog], account_type: 
     
     # Get transactions from last 5 business days
     cutoff_date = datetime.now() - timedelta(days=7)  # Simplified
-    recent_transactions = [t for t in transactions if t.executed_at >= cutoff_date]
+    recent_transactions = [t for t in transactions if t.transaction_date >= cutoff_date]
     
     # Group by symbol and date
     daily_trades = {}
     for transaction in recent_transactions:
-        date_key = transaction.executed_at.date()
+        date_key = transaction.transaction_date.date()
         symbol = transaction.symbol
         
         if date_key not in daily_trades:

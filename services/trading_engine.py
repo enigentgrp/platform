@@ -397,7 +397,7 @@ class TradingEngine:
     def _get_open_positions(self, session) -> List[Dict]:
         """Get currently open positions"""
         # Query transaction log to determine open positions
-        transactions = session.query(TransactionLog).order_by(TransactionLog.executed_at).all()
+        transactions = session.query(TransactionLog).order_by(TransactionLog.transaction_date).all()
         
         positions = {}
         for transaction in transactions:

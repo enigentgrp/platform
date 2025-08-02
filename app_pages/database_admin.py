@@ -6,7 +6,7 @@ and test database functionality as per exact specifications.
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-from database.database import get_db_session
+from database.database import get_session
 from database.models import (
     EnvironmentVariable, BrokerageInfo, Account, Stock, StockPriceHistory,
     PriorityCurrentPrice, PriorityArchivePrice, Order, TransactionLog, User
@@ -24,7 +24,7 @@ def render_database_admin_page():
         st.error("🚫 Access denied. Admin privileges required.")
         return
     
-    session = get_db_session()
+    session = get_session()
     db_service = DatabaseService(session)
     
     # Create tabs for different database operations

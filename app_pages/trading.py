@@ -282,7 +282,7 @@ def _show_options_interface():
                 # Simplified option pricing
                 intrinsic = max(0, current_price - strike) if option_type == "Call" else max(0, strike - current_price)
                 time_value = 2.5 * (expiry_days / 30)  # Simplified
-                option_price = intrinsic + time_value
+                option_price = float(intrinsic) + time_value
                 
                 strikes.append({
                     "Strike": f"${strike:.2f}",

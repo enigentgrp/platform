@@ -168,7 +168,7 @@ def _show_system_monitoring():
         with col4:
             total_transactions = session.query(TransactionLog).count()
             recent_transactions = session.query(TransactionLog).filter(
-                TransactionLog.executed_at >= datetime.now() - timedelta(days=1)
+                TransactionLog.transaction_date >= datetime.now() - timedelta(days=1)
             ).count()
             st.metric("Transactions", total_transactions, f"{recent_transactions} today")
         
@@ -342,7 +342,7 @@ def _show_trading_analytics():
         
         # Get recent transactions
         recent_transactions = session.query(TransactionLog).filter(
-            TransactionLog.executed_at >= datetime.now() - timedelta(days=30)
+            TransactionLog.transaction_date >= datetime.now() - timedelta(days=30)
         ).all()
         
         if recent_transactions:
