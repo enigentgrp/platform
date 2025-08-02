@@ -238,7 +238,7 @@ def _show_active_strategies():
         else:
             return ''
     
-    styled_df = df.style.applymap(color_status, subset=['Status'])
+    styled_df = df.style.map(color_status, subset=['Status'])
     st.dataframe(styled_df, use_container_width=True)
 
 def _show_options_interface():
@@ -259,7 +259,7 @@ def _show_options_interface():
             selected_stock = st.selectbox(
                 "Stock for Options",
                 options=options_stocks,
-                format_func=lambda x: f"{x.symbol} - ${x.last_price:.2f}"
+                format_func=lambda x: f"{x.symbol} - ${x.last_price:.2f}" if x.last_price is not None else f"{x.symbol} - No Price"
             )
         
         with col2:

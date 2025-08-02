@@ -124,24 +124,24 @@ def init_database():
                 broker = BrokerageInfo(**broker_data)
                 session.add(broker)
         
-        # Initialize S&P 500 stocks with sample data
+        # Initialize S&P 500 stocks with sample data including prices
         sample_stocks = [
-            {'symbol': 'AAPL', 'name': 'Apple Inc.', 'sector': 'Technology', 'industry': 'Consumer Electronics', 'market_cap': 3000000000000},
-            {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'sector': 'Technology', 'industry': 'Software', 'market_cap': 2800000000000},
-            {'symbol': 'GOOGL', 'name': 'Alphabet Inc.', 'sector': 'Communication Services', 'industry': 'Internet Services', 'market_cap': 1800000000000},
-            {'symbol': 'AMZN', 'name': 'Amazon.com Inc.', 'sector': 'Consumer Discretionary', 'industry': 'E-commerce', 'market_cap': 1600000000000},
-            {'symbol': 'TSLA', 'name': 'Tesla Inc.', 'sector': 'Consumer Discretionary', 'industry': 'Electric Vehicles', 'market_cap': 800000000000},
-            {'symbol': 'META', 'name': 'Meta Platforms Inc.', 'sector': 'Communication Services', 'industry': 'Social Media', 'market_cap': 900000000000},
-            {'symbol': 'NVDA', 'name': 'NVIDIA Corporation', 'sector': 'Technology', 'industry': 'Semiconductors', 'market_cap': 2200000000000},
-            {'symbol': 'JPM', 'name': 'JPMorgan Chase & Co.', 'sector': 'Financials', 'industry': 'Banking', 'market_cap': 500000000000},
-            {'symbol': 'JNJ', 'name': 'Johnson & Johnson', 'sector': 'Healthcare', 'industry': 'Pharmaceuticals', 'market_cap': 450000000000},
-            {'symbol': 'V', 'name': 'Visa Inc.', 'sector': 'Financials', 'industry': 'Payment Processing', 'market_cap': 520000000000}
+            {'symbol': 'AAPL', 'name': 'Apple Inc.', 'sector': 'Technology', 'industry': 'Consumer Electronics', 'market_cap': 3000000000000, 'last_price': 185.50, 'change_percent': 1.2},
+            {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'sector': 'Technology', 'industry': 'Software', 'market_cap': 2800000000000, 'last_price': 420.25, 'change_percent': 0.8},
+            {'symbol': 'GOOGL', 'name': 'Alphabet Inc.', 'sector': 'Communication Services', 'industry': 'Internet Services', 'market_cap': 1800000000000, 'last_price': 155.75, 'change_percent': -0.5},
+            {'symbol': 'AMZN', 'name': 'Amazon.com Inc.', 'sector': 'Consumer Discretionary', 'industry': 'E-commerce', 'market_cap': 1600000000000, 'last_price': 165.80, 'change_percent': 2.1},
+            {'symbol': 'TSLA', 'name': 'Tesla Inc.', 'sector': 'Consumer Discretionary', 'industry': 'Electric Vehicles', 'market_cap': 800000000000, 'last_price': 245.30, 'change_percent': 3.5},
+            {'symbol': 'META', 'name': 'Meta Platforms Inc.', 'sector': 'Communication Services', 'industry': 'Social Media', 'market_cap': 900000000000, 'last_price': 485.60, 'change_percent': 1.8},
+            {'symbol': 'NVDA', 'name': 'NVIDIA Corporation', 'sector': 'Technology', 'industry': 'Semiconductors', 'market_cap': 2200000000000, 'last_price': 875.40, 'change_percent': 4.2},
+            {'symbol': 'JPM', 'name': 'JPMorgan Chase & Co.', 'sector': 'Financials', 'industry': 'Banking', 'market_cap': 500000000000, 'last_price': 195.75, 'change_percent': 0.3},
+            {'symbol': 'JNJ', 'name': 'Johnson & Johnson', 'sector': 'Healthcare', 'industry': 'Pharmaceuticals', 'market_cap': 450000000000, 'last_price': 155.20, 'change_percent': -0.2},
+            {'symbol': 'V', 'name': 'Visa Inc.', 'sector': 'Financials', 'industry': 'Payment Processing', 'market_cap': 520000000000, 'last_price': 295.85, 'change_percent': 1.1}
         ]
         
         for stock_data in sample_stocks:
             existing = session.query(Stock).filter(Stock.symbol == stock_data['symbol']).first()
             if not existing:
-                stock = Stock(**stock_data, priority=0, has_options=True)
+                stock = Stock(**stock_data, priority=1, has_options=True)
                 session.add(stock)
         
         session.commit()

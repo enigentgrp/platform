@@ -71,7 +71,7 @@ def sidebar_navigation():
         if user.role == 'admin':
             pages["Admin"] = "🛠️"
         
-        selected_page = st.sidebar.selectbox(
+        selected_page = st.sidebar.radio(
             "Navigation",
             list(pages.keys()),
             format_func=lambda x: f"{pages[x]} {x}"
