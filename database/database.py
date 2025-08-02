@@ -103,15 +103,21 @@ def init_database():
             {
                 'name': 'Alpaca',
                 'api_url': 'https://paper-api.alpaca.markets',
-                'trading_fees': 0.0,
+                'trading_fees_per_share': 0.0,
+                'trading_fees_per_contract': 0.65,
                 'day_trade_limit': 3,
+                'supports_options': True,
+                'supports_crypto': True,
                 'is_active': True
             },
             {
                 'name': 'Robinhood',
                 'api_url': 'https://robinhood.com/api',
-                'trading_fees': 0.0,
+                'trading_fees_per_share': 0.0,
+                'trading_fees_per_contract': 0.0,
                 'day_trade_limit': 3,
+                'supports_options': True,
+                'supports_crypto': True,
                 'is_active': False
             }
         ]

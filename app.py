@@ -68,9 +68,10 @@ def sidebar_navigation():
             "Settings": "⚙️"
         }
         
-        # Add admin page for admin users
+        # Add admin pages for admin users
         if user.role == 'admin':
             pages["Admin"] = "🛠️"
+            pages["Database Admin"] = "🗄️"
         
         selected_page = st.sidebar.radio(
             "Navigation",
@@ -178,6 +179,9 @@ def load_page_content(page_name):
     elif page_name == "Admin":
         from app_pages.admin import show_admin_page
         show_admin_page()
+    elif page_name == "Database Admin":
+        from app_pages.database_admin import render_database_admin_page
+        render_database_admin_page()
 
 def main():
     """Main application entry point"""

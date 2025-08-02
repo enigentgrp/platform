@@ -1,0 +1,34 @@
+Table for global environment variables (perhaps here or elsewhere set a variable for paper trading or live trading for what broker and account. See references below for additional values to be set.)
+
+Table for brokerage info including login credentials, trading fees, day trade restrictions. Begin with RobinHood and alpaca
+
+Table identifying different accounts at each brokerage, name, type, total balance, cash balance
+
+Table for stock demographics including symbol, name, sector, industry, market cap - initially populated only with data for stocks in the S&P 500 that have actively traded options available. Include an indexed smallint column called PRIORITY.  After populating the stock price history table and just before the next trading session, set priority equal 1 if the closing price is greater than one standard deviation above or below the 20 day moving average, and the closing price is above or below the moving average by more than x% (percentage Target found in the environment table). Set priority to 0 for all others except the following sector ETF index funds to be included in the demographics table with a priority constantly equal 9 
+Sector Name, Ticker Symbol
+Energy XLE
+Materials XLB
+Industrials XLI
+Consumer Discretionary XLY
+Consumer Staples XLP
+Healthcare XLV
+Financials XLF
+Information Technology XLK
+Communication Services XLC
+Utilities XLU
+Real Estate XLRE
+
+
+Table for stock price history (populate during off hours just after the last trading session for past 90 days), preferably sending all ticker symbols and retrieving all price information from the broker in a single call rather than a separate call for each ticker symbol. Then calculate and populate into the same table common technical indicators, especially the following support for binary options: Wilder’s directional movement indicators, pivot points, 14 day commodity channel index, and 20 day Bollinger bands using 2 standard deviations.
+
+Table for Priority Archive price to which we move all records from the priority current price table at the end of each day, and purge all older than x days (set in environment table)
+
+Table for Priority Current price populated with each stock ticker where priority greater than zero. record ticker symbol (Index) , datetime (I dex), price at open, then new record every x seconds (from environment variables) along with percent change from previous price.
+
+Table for orders showing asset, action quantity, bid, ask, limit, timedate, etc
+
+Table for transaction log showing order ID,  asset, timedate, quantity, price, LIFO gain\(loss)
+    
+Support different broker APIs in separate modules (start with RobinHood and alpaca) such that if the general program decides to sell an asset, a generic call to sell can be routed to the specific sell function for the API of the active broker per the environment variables.
+
+Evaluate the priority current price table. If no order exists for this ticker, and x periods (set in 
