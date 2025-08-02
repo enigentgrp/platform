@@ -195,7 +195,7 @@ def _show_current_positions():
                     pass
             return ''
         
-        styled_df = df.style.applymap(color_pnl, subset=['Unrealized P&L'])
+        styled_df = df.style.map(color_pnl, subset=['Unrealized P&L'])
         st.dataframe(styled_df, use_container_width=True)
         
         # Summary metrics
@@ -494,8 +494,8 @@ def _show_transaction_history():
                         pass
                 return ''
             
-            styled_df = df.style.applymap(color_side, subset=['Side'])\
-                              .applymap(color_pnl, subset=['P&L'])
+            styled_df = df.style.map(color_side, subset=['Side'])\
+                              .map(color_pnl, subset=['P&L'])
             
             st.dataframe(styled_df, use_container_width=True)
             

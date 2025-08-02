@@ -163,16 +163,16 @@ def load_page_content(page_name):
     if page_name == "Dashboard":
         main_dashboard()
     elif page_name == "Trading":
-        from pages.trading import show_trading_page
+        from app_pages.trading import show_trading_page
         show_trading_page()
     elif page_name == "Portfolio":
-        from pages.portfolio import show_portfolio_page
+        from app_pages.portfolio import show_portfolio_page
         show_portfolio_page()
     elif page_name == "Settings":
-        from pages.settings import show_settings_page
+        from app_pages.settings import show_settings_page
         show_settings_page()
     elif page_name == "Admin":
-        from pages.admin import show_admin_page
+        from app_pages.admin import show_admin_page
         show_admin_page()
 
 def main():

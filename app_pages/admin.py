@@ -74,7 +74,7 @@ def _show_user_management():
                 return "background-color: lightcoral"
             return ""
         
-        styled_df = df.style.applymap(color_status, subset=['Status'])
+        styled_df = df.style.map(color_status, subset=['Status'])
         st.dataframe(styled_df, use_container_width=True)
         
         # User actions
@@ -518,7 +518,7 @@ def _show_system_logs():
                 return "background-color: #f3e5f5; color: #7b1fa2"
             return ""
         
-        styled_logs = logs_df.style.applymap(color_log_level, subset=['Level'])
+        styled_logs = logs_df.style.map(color_log_level, subset=['Level'])
         st.dataframe(styled_logs, use_container_width=True)
         
         # Log statistics

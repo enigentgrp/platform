@@ -52,7 +52,7 @@ def show_trading_page():
                 color = 'green' if val > 0 else 'red' if val < 0 else 'gray'
                 return f'color: {color}'
             
-            styled_df = df.style.applymap(color_change, subset=['Change %'])
+            styled_df = df.style.map(color_change, subset=['Change %'])
             st.dataframe(styled_df, use_container_width=True)
             
             # Stock selection for manual trading
@@ -201,7 +201,7 @@ def _show_market_data():
         color = 'green' if val > 0 else 'red' if val < 0 else 'gray'
         return f'color: {color}'
     
-    styled_indices = indices_df.style.applymap(color_change, subset=['Change', 'Change %'])
+    styled_indices = indices_df.style.map(color_change, subset=['Change', 'Change %'])
     st.dataframe(styled_indices, use_container_width=True)
     
     # Sector performance chart
