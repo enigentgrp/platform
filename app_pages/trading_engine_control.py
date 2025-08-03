@@ -5,11 +5,15 @@ from datetime import datetime
 from services.trading_engine import TradingEngine
 from database.database import get_session
 from database.models import EnvironmentVariable, Order, TransactionLog
-from utils.auth import require_authentication, check_permission
+from utils.auth import check_permission
 
-@require_authentication
 def show_trading_engine_control():
     """Trading Engine Control Panel"""
+    
+    # Check authentication
+    if not st.session_state.get('authenticated', False):
+        st.error("🚫 Please log in to access this page.")
+        return
     
     user = st.session_state.user
     
