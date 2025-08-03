@@ -27,6 +27,7 @@ def show_trading_engine_control():
     # Initialize trading engine in session state
     if 'trading_engine' not in st.session_state:
         st.session_state.trading_engine = None
+    if 'engine_status' not in st.session_state:
         st.session_state.engine_status = "Stopped"
     
     # Current status
@@ -96,7 +97,8 @@ def show_trading_engine_control():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("▶️ Start Trading Engine", disabled=(st.session_state.engine_status == "Running")):
+        is_running = st.session_state.get('engine_status', 'Stopped') == "Running"
+        if st.button("▶️ Start Trading Engine", disabled=is_running):
             try:
                 st.session_state.trading_engine = TradingEngine()
                 st.session_state.trading_engine.start_trading()
@@ -108,9 +110,10 @@ def show_trading_engine_control():
                 st.error(f"❌ Failed to start trading engine: {e}")
     
     with col2:
-        if st.button("⏹️ Stop Trading Engine", disabled=(st.session_state.engine_status == "Stopped")):
+        is_stopped = st.session_state.get('engine_status', 'Stopped') == "Stopped"
+        if st.button("⏹️ Stop Trading Engine", disabled=is_stopped):
             try:
-                if st.session_state.trading_engine:
+                if st.session_state.get('trading_engine'):
                     st.session_state.trading_engine.stop_trading()
                     st.session_state.trading_engine = None
                 st.session_state.engine_status = "Stopped"
@@ -124,7 +127,7 @@ def show_trading_engine_control():
         if st.button("🔄 Restart Engine"):
             try:
                 # Stop first
-                if st.session_state.trading_engine:
+                if st.session_state.get('trading_engine'):
                     st.session_state.trading_engine.stop_trading()
                     time.sleep(2)
                 
@@ -246,7 +249,7 @@ def show_trading_engine_control():
         session.close()
     
     # Warning messages
-    if st.session_state.engine_status == "Running":
+    if st.session_state.get('engine_status', 'Stopped') == "Running":
         st.warning("⚠️ **IMPORTANT:** The trading engine is actively placing real trades. Monitor your account regularly.")
     
     if user.role == 'admin':
