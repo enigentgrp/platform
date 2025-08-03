@@ -13,6 +13,7 @@ from utils.helpers import (
     calculate_risk_metrics
 )
 from utils.auth import check_permission
+from utils.broker_status_widget import display_mini_broker_status
 
 def show_portfolio_page():
     """Portfolio overview and analysis page"""
@@ -27,6 +28,11 @@ def show_portfolio_page():
     elif not check_permission(user, 'trader'):
         st.error("🚫 Access denied. Portfolio access requires trader privileges or higher.")
         return
+    
+    # Mini broker status
+    is_connected = display_mini_broker_status()
+    if not is_connected:
+        st.warning("⚠️ Broker connection issues. Portfolio data may be limited.")
     
     # Portfolio overview metrics
     _show_portfolio_overview()

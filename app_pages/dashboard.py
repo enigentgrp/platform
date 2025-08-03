@@ -9,19 +9,22 @@ from database.models import Stock, Order, TransactionLog, Account
 from services.data_fetcher import DataFetcher
 from services.broker_apis import BrokerManager
 from utils.helpers import format_currency, format_percentage, calculate_portfolio_value
+from utils.broker_status_widget import display_animated_broker_status, display_connection_health_chart
 
 def show_dashboard():
     st.title("📊 Trading Dashboard")
     
-    # Initialize broker manager with centralized configuration
-    if 'broker_manager' not in st.session_state:
-        st.session_state.broker_manager = BrokerManager()
+    # Animated broker status widget
+    st.subheader("🔗 Broker Connection Status")
+    is_connected, account_info = display_animated_broker_status()
     
-    broker_manager = st.session_state.broker_manager
+    if not is_connected:
+        st.warning("⚠️ Broker connection issues detected. Some features may be limited.")
+        return
     
-    # Display current broker info
-    active_broker = broker_manager.get_active_broker_name()
-    st.info(f"🎯 Active Broker: {active_broker}")
+    # Connection health monitoring
+    with st.expander("📈 Connection Health Monitor", expanded=False):
+        display_connection_health_chart()
     
     # Get account information from active broker
     account_info = broker_manager.get_account_info()

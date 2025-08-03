@@ -6,6 +6,7 @@ from database.database import get_session
 from database.models import EnvironmentVariable, BrokerageInfo, Account, User
 from utils.auth import check_permission, hash_password
 from services.data_fetcher import DataFetcher
+from utils.broker_status_widget import display_animated_broker_status
 
 def show_settings_page():
     """Settings and configuration page"""
@@ -262,29 +263,12 @@ def _show_broker_configuration():
             st.balloons()
             st.rerun()
         
-        # Show current broker status
-        st.subheader("📊 Broker Connection Status")
+        # Show current broker status with animated widget
+        st.subheader("📊 Live Broker Connection Status")
+        is_connected, account_info = display_animated_broker_status()
         
-        try:
-            from services.broker_apis import BrokerManager
-            test_manager = BrokerManager()
-            
-            active_broker_name = test_manager.get_active_broker_name()
-            account_info = test_manager.get_account_info()
-            
-            if 'error' not in account_info:
-                st.success(f"✅ Connected to {active_broker_name}")
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Portfolio Value", f"${account_info.get('portfolio_value', 0):,.2f}")
-                with col2:
-                    st.metric("Available Cash", f"${account_info.get('cash', 0):,.2f}")
-                with col3:
-                    st.metric("Account", account_info.get('account_number', 'N/A'))
-            else:
-                st.error(f"❌ Connection failed to {active_broker_name}: {account_info.get('error', 'Unknown error')}")
-        except Exception as e:
-            st.warning(f"Unable to test broker connection: {e}")
+        if not is_connected:
+            st.error("⚠️ Connection test failed. Please verify broker credentials and network connectivity.")
         
         # Trading fees configuration  
         st.subheader("💰 Trading Fees Configuration")

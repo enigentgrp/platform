@@ -8,6 +8,7 @@ from database.models import Stock, Order, TransactionLog, PriorityCurrentPrice
 from services.technical_indicators import TechnicalIndicators
 from services.broker_apis import BrokerManager
 from utils.helpers import format_currency, format_percentage
+from utils.broker_status_widget import display_mini_broker_status
 
 def show_trading_page():
     st.title("💹 Advanced Trading")
@@ -25,17 +26,12 @@ def show_trading_page():
     
     broker_manager = st.session_state.broker_manager
     
-    # Display current broker info and connection status
-    active_broker = broker_manager.get_active_broker_name()
-    st.info(f"🎯 Active Broker: {active_broker}")
+    # Mini broker status widget
+    is_connected = display_mini_broker_status()
     
-    # Check connection status
-    alpaca_api = broker_manager.get_active_broker()
-    if not alpaca_api.authenticated:
-        st.error(f"❌ Not connected to {active_broker}. Check API credentials.")
+    if not is_connected:
+        st.error("❌ Broker connection failed. Please check Settings > Broker Configuration.")
         return
-    else:
-        st.success(f"✅ Connected to {active_broker}")
     
     # Trading controls
     col1, col2, col3 = st.columns([1, 1, 1])
