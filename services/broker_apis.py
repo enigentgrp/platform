@@ -70,7 +70,11 @@ class AlpacaAPI(BrokerAPI):
             base_url = 'https://api.alpaca.markets'
             data_url = 'https://data.alpaca.markets'
         
-        super().__init__(base_url=base_url)
+        # Use Alpaca-specific environment variables
+        api_key = os.getenv('ALPACA_API_KEY')
+        api_secret = os.getenv('ALPACA_SECRET_KEY')
+        
+        super().__init__(api_key=api_key, api_secret=api_secret, base_url=base_url)
         self.data_url = data_url
         self.authenticated = False
     
@@ -78,9 +82,8 @@ class AlpacaAPI(BrokerAPI):
         """Authenticate with Alpaca API"""
         try:
             if not self.api_key or not self.api_secret:
-                # For development, use mock authentication
-                self.authenticated = True
-                return True
+                print("Alpaca API keys not found in environment variables")
+                return False
             
             headers = {
                 'APCA-API-KEY-ID': self.api_key,
@@ -91,23 +94,19 @@ class AlpacaAPI(BrokerAPI):
             if response.status_code == 200:
                 self.session.headers.update(headers)
                 self.authenticated = True
+                print(f"Successfully authenticated with Alpaca {'Paper Trading' if self.paper_trading else 'Live Trading'}")
                 return True
+            else:
+                print(f"Alpaca authentication failed: {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"Error authenticating with Alpaca: {e}")
             return False
-        except Exception:
-            # For development, assume authentication succeeds
-            self.authenticated = True
-            return True
     
     def get_account_info(self) -> Dict:
         """Get Alpaca account information"""
         if not self.authenticated:
-            return {
-                'account_number': 'MOCK_ACCOUNT',
-                'cash': 100000.0,
-                'portfolio_value': 100000.0,
-                'buying_power': 100000.0,
-                'day_trade_count': 0
-            }
+            return {'error': 'Not authenticated with Alpaca'}
         
         try:
             response = self.session.get(f'{self.base_url}/v2/account')
@@ -140,7 +139,7 @@ class AlpacaAPI(BrokerAPI):
                         'quantity': int(pos['qty']),
                         'market_value': float(pos['market_value']),
                         'cost_basis': float(pos['cost_basis']),
-                        'unrealized_pnl': float(pos['unrealized_pnl']),
+                        'unrealized_pnl': float(pos.get('unrealized_pnl', 0)),
                         'side': 'long' if int(pos['qty']) > 0 else 'short'
                     }
                     for pos in positions
@@ -154,15 +153,7 @@ class AlpacaAPI(BrokerAPI):
                    price: float = None, stop_price: float = None) -> Dict:
         """Place order with Alpaca"""
         if not self.authenticated:
-            # Mock order placement for development
-            return {
-                'id': f'mock_order_{datetime.now().timestamp()}',
-                'status': 'filled',
-                'symbol': symbol,
-                'side': side,
-                'quantity': quantity,
-                'filled_price': price or 100.0
-            }
+            return {'error': 'Not authenticated with Alpaca'}
         
         order_data = {
             'symbol': symbol,
@@ -330,10 +321,12 @@ class BrokerManager:
     
     def __init__(self):
         self.brokers = {
-            'alpaca': AlpacaAPI(),
+            'alpaca': AlpacaAPI(paper_trading=True),
             'robinhood': RobinhoodAPI()
         }
         self.active_broker = 'alpaca'
+        # Auto-authenticate with Alpaca on initialization
+        self.brokers['alpaca'].authenticate()
     
     def set_active_broker(self, broker_name: str):
         """Set the active broker"""

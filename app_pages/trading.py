@@ -19,17 +19,115 @@ def show_trading_page():
         st.info("Viewers can only access Dashboard, Portfolio (read-only), and AI Assistant.")
         return
     
+    # Initialize Alpaca broker connection
+    if 'broker_manager' not in st.session_state:
+        st.session_state.broker_manager = BrokerManager()
+    
+    broker_manager = st.session_state.broker_manager
+    
+    # Check connection status
+    alpaca_api = broker_manager.get_active_broker()
+    if not alpaca_api.authenticated:
+        st.error("❌ Not connected to Alpaca. Check API credentials.")
+        return
+    else:
+        st.success("✅ Connected to Alpaca Paper Trading")
+    
     # Trading controls
     col1, col2, col3 = st.columns([1, 1, 1])
     
     with col1:
-        trading_mode = st.selectbox("Mode", ["Paper", "Live"])
+        trading_mode = st.selectbox("Mode", ["Paper Trading"], disabled=True)
     
     with col2:
         auto_trading = st.toggle("Auto Trading", value=False)
     
     with col3:
         risk_level = st.selectbox("Risk Level", ["Conservative", "Moderate", "Aggressive"])
+    
+    # Account information
+    account_info = broker_manager.get_account_info()
+    if 'error' not in account_info:
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Cash", f"${account_info.get('cash', 0):,.2f}")
+        with col2:
+            st.metric("Portfolio Value", f"${account_info.get('portfolio_value', 0):,.2f}")
+        with col3:
+            st.metric("Buying Power", f"${account_info.get('buying_power', 0):,.2f}")
+        with col4:
+            st.metric("Day Trades", account_info.get('day_trade_count', 0))
+    
+    # Live market data section
+    st.subheader("📊 Live Market Data")
+    
+    symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA']
+    market_data = broker_manager.get_market_data(symbols)
+    
+    if market_data:
+        cols = st.columns(len(symbols))
+        for i, (symbol, data) in enumerate(market_data.items()):
+            with cols[i]:
+                price = data.get('price', 0)
+                change_pct = data.get('change_percent', 0)
+                delta_color = "normal" if change_pct >= 0 else "inverse"
+                st.metric(
+                    symbol,
+                    f"${price:.2f}",
+                    f"{change_pct:+.2f}%",
+                    delta_color=delta_color
+                )
+    
+    # Quick trading interface
+    st.subheader("🎯 Quick Trade")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**Place Order**")
+        
+        trade_symbol = st.selectbox("Symbol", symbols, key="trade_symbol")
+        trade_side = st.selectbox("Action", ["buy", "sell"], key="trade_side")
+        trade_quantity = st.number_input("Quantity", min_value=1, value=1, key="trade_quantity")
+        trade_type = st.selectbox("Order Type", ["market", "limit"], key="trade_type")
+        
+        limit_price = None
+        if trade_type == "limit":
+            current_price = market_data.get(trade_symbol, {}).get('price', 100)
+            limit_price = st.number_input(
+                "Limit Price", 
+                min_value=0.01, 
+                value=float(current_price),
+                key="limit_price"
+            )
+        
+        if st.button("Place Order", type="primary"):
+            order_result = broker_manager.place_order(
+                symbol=trade_symbol,
+                side=trade_side,
+                quantity=trade_quantity,
+                order_type=trade_type,
+                price=limit_price
+            )
+            
+            if 'error' not in order_result:
+                st.success(f"✅ Order placed: {trade_side.upper()} {trade_quantity} {trade_symbol}")
+                st.json(order_result)
+                
+                # Log to database
+                _log_order(trade_symbol, trade_side, trade_quantity, trade_type)
+            else:
+                st.error(f"❌ Order failed: {order_result.get('error', 'Unknown error')}")
+    
+    with col2:
+        st.write("**Current Positions**")
+        
+        positions = broker_manager.get_positions()
+        if positions:
+            positions_df = pd.DataFrame(positions)
+            st.dataframe(positions_df, use_container_width=True)
+        else:
+            st.info("No current positions")
     
     # Real-time monitoring
     st.subheader("📈 Real-Time Monitoring")
