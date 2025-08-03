@@ -27,8 +27,9 @@ def show_settings_page():
             "👤 User Profile"
         ])
     elif is_trader:
-        tab1, tab2, tab3 = st.tabs([
+        tab1, tab2, tab3, tab4 = st.tabs([
             "📊 Trading Settings",
+            "🏦 Broker Configuration",
             "💰 Account Settings", 
             "👤 User Profile"
         ])
@@ -59,8 +60,10 @@ def show_settings_page():
         with tab1:
             _show_trading_settings()
         with tab2:
-            _show_account_settings()
+            _show_broker_configuration()
         with tab3:
+            _show_account_settings()
+        with tab4:
             _show_user_profile()
 
 def _show_trading_settings():
