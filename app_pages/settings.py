@@ -88,12 +88,15 @@ def _show_trading_settings():
                 index=0 if env_vars.get('TRADING_MODE', 'paper') == 'paper' else 1
             )
             
-            # Active broker
-            active_broker = st.selectbox(
-                "Active Broker",
-                ["alpaca", "robinhood"],
-                index=0 if env_vars.get('ACTIVE_BROKER', 'alpaca') == 'alpaca' else 1
-            )
+            # Active broker display (read-only)
+            from services.broker_apis import BrokerManager
+            broker_manager = BrokerManager()
+            real_active_broker = broker_manager.get_active_broker_name()
+            trading_mode = env_vars.get('TRADING_MODE', 'paper')
+            
+            st.write("**Active Broker**")
+            st.success(f"🎯 {real_active_broker} ({'Paper Trading' if trading_mode == 'paper' else 'Live Trading'})")
+            st.caption("To change broker, use the 'Broker Configuration' tab below")
             
             # Price update interval
             price_interval = st.number_input(
@@ -153,7 +156,6 @@ def _show_trading_settings():
         if st.button("💾 Save Trading Settings", type="primary"):
             _save_environment_variables(session, {
                 'TRADING_MODE': trading_mode,
-                'ACTIVE_BROKER': active_broker,
                 'PRICE_UPDATE_INTERVAL': str(price_interval),
                 'MAX_POSITION_SIZE_PERCENT': str(max_position_size),
                 'RISK_MANAGEMENT_ENABLED': str(risk_management).lower(),
