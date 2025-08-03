@@ -1,5 +1,4 @@
 import streamlit as st
-import threading
 import time
 from datetime import datetime
 from services.trading_engine import TradingEngine
@@ -129,7 +128,6 @@ def show_trading_engine_control():
                 # Stop first
                 if st.session_state.get('trading_engine'):
                     st.session_state.trading_engine.stop_trading()
-                    time.sleep(2)
                 
                 # Start fresh
                 st.session_state.trading_engine = TradingEngine()

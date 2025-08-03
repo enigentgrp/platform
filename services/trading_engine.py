@@ -64,13 +64,33 @@ class TradingEngine:
         self.is_running = True
         logger.info(f"Starting trading engine in {self.trading_mode} mode")
         
-        # Start the main trading loop
-        asyncio.create_task(self._trading_loop())
+        # Start the main trading loop in a separate thread
+        import threading
+        self.trading_thread = threading.Thread(target=self._run_trading_loop, daemon=True)
+        self.trading_thread.start()
     
     def stop_trading(self):
         """Stop the trading engine"""
         self.is_running = False
         logger.info("Trading engine stopped")
+        
+        # Wait for trading thread to finish
+        if hasattr(self, 'trading_thread') and self.trading_thread.is_alive():
+            self.trading_thread.join(timeout=5.0)
+    
+    def _run_trading_loop(self):
+        """Run the trading loop in a thread"""
+        import asyncio
+        import time
+        
+        # Create new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            loop.run_until_complete(self._trading_loop())
+        finally:
+            loop.close()
     
     async def _trading_loop(self):
         """Main trading loop"""
