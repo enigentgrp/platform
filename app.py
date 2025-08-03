@@ -69,6 +69,7 @@ def sidebar_navigation():
         # Add role-specific pages
         if user.role in ['trader', 'admin']:
             pages["Trading"] = "💹"
+            pages["Trading Engine"] = "🤖"
             pages["Settings"] = "⚙️"
         elif user.role == 'viewer':
             # Viewers get limited settings (just profile)
@@ -239,6 +240,9 @@ def load_page_content(page_name):
     elif page_name == "Trading":
         from app_pages.trading import show_trading_page
         show_trading_page()
+    elif page_name == "Trading Engine":
+        from app_pages.trading_engine_control import show_trading_engine_control
+        show_trading_engine_control()
     elif page_name == "Portfolio":
         from app_pages.portfolio import show_portfolio_page
         show_portfolio_page()
