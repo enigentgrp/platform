@@ -99,23 +99,89 @@ def sidebar_navigation():
 def main_dashboard():
     st.title("📊 Trading Dashboard")
     
-    # Quick stats
+    # Initialize broker connection for real data
+    from services.broker_apis import BrokerManager
+    
+    if 'broker_manager' not in st.session_state:
+        st.session_state.broker_manager = BrokerManager()
+    
+    broker_manager = st.session_state.broker_manager
+    
+    # Get real account data
+    account_info = broker_manager.get_account_info()
+    positions = broker_manager.get_positions()
+    
+    # Quick stats with real data
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("Portfolio Value", "$125,432.50", "2.3%")
+        if 'error' not in account_info:
+            portfolio_value = account_info.get('portfolio_value', 0)
+            st.metric("Portfolio Value", f"${portfolio_value:,.2f}")
+        else:
+            st.metric("Portfolio Value", "Not Connected", "Check API")
     
     with col2:
-        st.metric("Daily P&L", "$1,234.56", "0.98%")
+        if 'error' not in account_info:
+            cash = account_info.get('cash', 0)
+            st.metric("Available Cash", f"${cash:,.2f}")
+        else:
+            st.metric("Available Cash", "Not Connected")
     
     with col3:
-        st.metric("Active Positions", "12", "2")
+        st.metric("Active Positions", str(len(positions)))
     
     with col4:
-        st.metric("Success Rate", "68.5%", "1.2%")
+        if 'error' not in account_info:
+            day_trades = account_info.get('day_trade_count', 0)
+            st.metric("Day Trades Used", str(day_trades))
+        else:
+            st.metric("Connection", "❌ Disconnected")
     
-    # Market overview
-    st.subheader("📈 Market Overview")
+    # Live market overview
+    st.subheader("📈 Live Market Overview")
+    
+    # Get real market data
+    symbols = ['SPY', 'QQQ', 'DIA', 'VIX']
+    market_data = broker_manager.get_market_data(symbols)
+    
+    if market_data:
+        cols = st.columns(len(symbols))
+        index_names = {'SPY': 'S&P 500 ETF', 'QQQ': 'NASDAQ ETF', 'DIA': 'DOW ETF', 'VIX': 'Volatility Index'}
+        
+        for i, symbol in enumerate(symbols):
+            with cols[i]:
+                if symbol in market_data:
+                    data = market_data[symbol]
+                    price = data.get('price', 0)
+                    change_pct = data.get('change_percent', 0)
+                    delta_color = "normal" if change_pct >= 0 else "inverse"
+                    
+                    st.metric(
+                        index_names.get(symbol, symbol),
+                        f"${price:.2f}",
+                        f"{change_pct:+.2f}%",
+                        delta_color=delta_color
+                    )
+                else:
+                    st.metric(index_names.get(symbol, symbol), "Loading...")
+    else:
+        st.warning("Unable to fetch live market data. Check connection.")
+    
+    # Current positions
+    st.subheader("📊 Current Positions")
+    
+    if positions:
+        positions_df = pd.DataFrame(positions)
+        # Format the dataframe for better display
+        if not positions_df.empty:
+            positions_df['market_value'] = positions_df['market_value'].apply(lambda x: f"${x:,.2f}")
+            positions_df['cost_basis'] = positions_df['cost_basis'].apply(lambda x: f"${x:,.2f}")
+            positions_df['unrealized_pnl'] = positions_df['unrealized_pnl'].apply(lambda x: f"${x:,.2f}")
+        
+        st.dataframe(positions_df, use_container_width=True)
+    else:
+        st.info("No current positions. Start trading to see your portfolio here.")
     
     # Priority stocks monitoring
     st.subheader("🎯 Priority Stocks")
