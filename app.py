@@ -59,6 +59,13 @@ def sidebar_navigation():
         st.sidebar.write(f"👤 Welcome, {user.username}")
         st.sidebar.write(f"🏷️ Role: {user.role}")
         
+        # Show engine status in sidebar
+        engine_status = st.session_state.get('engine_status', 'Stopped')
+        if engine_status == "Running":
+            st.sidebar.success("🤖 Engine: RUNNING")
+        else:
+            st.sidebar.warning("🤖 Engine: STOPPED")
+        
         # Navigation menu based on user role
         pages = {
             "Dashboard": "📊",
@@ -218,20 +225,37 @@ def main_dashboard():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.session_state.get('trading_engine_active', False):
-            st.success("✅ Trading Engine: ACTIVE")
-            if st.button("🛑 Stop Trading Engine"):
-                st.session_state.trading_engine_active = False
-                st.rerun()
+        # Get actual engine status from session state
+        engine_status = st.session_state.get('engine_status', 'Stopped')
+        if engine_status == "Running":
+            st.success("✅ Trading Engine: RUNNING")
+            st.info("Engine is actively monitoring markets and placing trades.")
         else:
             st.warning("⏸️ Trading Engine: STOPPED")
-            if st.button("▶️ Start Trading Engine"):
-                st.session_state.trading_engine_active = True
-                st.rerun()
+            st.info("No automated trading is occurring.")
+        
+        # Link to control page
+        if st.button("🎮 Go to Engine Control"):
+            # Force page refresh to sync status
+            st.rerun()
     
     with col2:
-        trading_mode = st.selectbox("Trading Mode", ["Paper Trading", "Live Trading"])
-        st.info(f"Current Mode: {trading_mode}")
+        # Show current trading mode from database
+        session = get_session()
+        try:
+            mode_var = session.query(EnvironmentVariable).filter(
+                EnvironmentVariable.key == 'TRADING_MODE'
+            ).first()
+            current_mode = mode_var.value if mode_var else 'paper'
+            st.info(f"🎯 Trading Mode: {current_mode.title()}")
+            
+            # Show recent engine activity
+            if engine_status == "Running":
+                st.metric("Engine Cycles", "Running continuously")
+            else:
+                st.metric("Engine Cycles", "0 (Stopped)")
+        finally:
+            session.close()
 
 def load_page_content(page_name):
     """Dynamically load page content"""

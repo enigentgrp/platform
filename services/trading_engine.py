@@ -142,9 +142,10 @@ class TradingEngine:
                     # Add to priority current price table
                     priority_price = PriorityCurrentPrice(
                         stock_id=stock.id,
+                        symbol=stock.symbol,
                         datetime=datetime.utcnow(),
                         current_price=data['price'],
-                        percent_change=data['change_percent'],
+                        percent_change_from_previous=data['change_percent'],
                         volume=data.get('volume', 0)
                     )
                     session.add(priority_price)
