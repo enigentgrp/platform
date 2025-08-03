@@ -316,17 +316,124 @@ class RobinhoodAPI(BrokerAPI):
         """Mock historical data for Robinhood"""
         return pd.DataFrame()
 
+class TradierAPI(BrokerAPI):
+    """Tradier API implementation (mock for development)"""
+    
+    def __init__(self, sandbox: bool = True):
+        self.sandbox = sandbox
+        base_url = 'https://sandbox.tradier.com' if sandbox else 'https://api.tradier.com'
+        super().__init__(base_url=base_url)
+        self.authenticated = False
+    
+    def authenticate(self) -> bool:
+        """Mock authentication for Tradier"""
+        self.authenticated = True
+        print("Successfully authenticated with Tradier (Mock)")
+        return True
+    
+    def get_account_info(self) -> Dict:
+        """Mock account info for Tradier"""
+        return {
+            'account_number': 'TRADIER_MOCK_ACCOUNT',
+            'cash': 75000.0,
+            'portfolio_value': 75000.0,
+            'buying_power': 75000.0,
+            'day_trade_count': 0
+        }
+    
+    def get_positions(self) -> List[Dict]:
+        """Mock positions for Tradier"""
+        return []
+    
+    def place_order(self, symbol: str, side: str, quantity: int, order_type: str = 'market',
+                   price: float = None, stop_price: float = None) -> Dict:
+        """Mock order placement for Tradier"""
+        return {
+            'id': f'tradier_mock_order_{datetime.now().timestamp()}',
+            'status': 'filled',
+            'symbol': symbol,
+            'side': side,
+            'quantity': quantity,
+            'filled_price': price or 100.0
+        }
+    
+    def get_order_status(self, order_id: str) -> Dict:
+        """Mock order status for Tradier"""
+        return {'id': order_id, 'status': 'filled'}
+    
+    def cancel_order(self, order_id: str) -> bool:
+        """Mock order cancellation for Tradier"""
+        return True
+    
+    def get_market_data(self, symbols: List[str]) -> Dict:
+        """Mock market data for Tradier"""
+        return {symbol: {'price': 100.0, 'change_percent': 0.5} for symbol in symbols}
+    
+    def get_historical_data(self, symbol: str, timeframe: str = '1D',
+                          start_date: datetime = None, end_date: datetime = None) -> pd.DataFrame:
+        """Mock historical data for Tradier"""
+        return pd.DataFrame()
+
 class BrokerManager:
-    """Manager class to handle multiple broker APIs"""
+    """Manager class to handle multiple broker APIs with dynamic configuration"""
     
     def __init__(self):
         self.brokers = {
-            'alpaca': AlpacaAPI(paper_trading=True),
-            'robinhood': RobinhoodAPI()
+            'alpaca_paper': AlpacaAPI(paper_trading=True),
+            'alpaca_live': AlpacaAPI(paper_trading=False),
+            'robinhood': RobinhoodAPI(),
+            'tradier_paper': TradierAPI(sandbox=True),
+            'tradier_live': TradierAPI(sandbox=False)
         }
-        self.active_broker = 'alpaca'
-        # Auto-authenticate with Alpaca on initialization
-        self.brokers['alpaca'].authenticate()
+        self.active_broker = self._get_broker_from_env()
+        self._authenticate_active_broker()
+    
+    def _get_broker_from_env(self) -> str:
+        """Get active broker from environment variables or database"""
+        from database.database import get_session
+        from database.models import EnvironmentVariable
+        
+        try:
+            session = get_session()
+            trading_mode = session.query(EnvironmentVariable)\
+                .filter(EnvironmentVariable.key == 'TRADING_MODE').first()
+            paper_broker = session.query(EnvironmentVariable)\
+                .filter(EnvironmentVariable.key == 'PAPER_TRADING_BROKER').first()
+            live_broker = session.query(EnvironmentVariable)\
+                .filter(EnvironmentVariable.key == 'LIVE_TRADING_BROKER').first()
+            
+            mode = trading_mode.value if trading_mode else 'paper'
+            if mode == 'paper':
+                broker = paper_broker.value if paper_broker else 'alpaca_paper'
+            else:
+                broker = live_broker.value if live_broker else 'robinhood'
+            
+            session.close()
+            return broker
+        except Exception:
+            return 'alpaca_paper'  # Default fallback
+    
+    def _authenticate_active_broker(self):
+        """Authenticate with the currently active broker"""
+        if self.active_broker in self.brokers:
+            self.brokers[self.active_broker].authenticate()
+    
+    def get_active_broker_name(self) -> str:
+        """Get the name of the currently active broker"""
+        return self.active_broker
+    
+    def switch_broker(self, broker_name: str) -> bool:
+        """Switch to a different broker and authenticate"""
+        if broker_name in self.brokers:
+            self.active_broker = broker_name
+            self._authenticate_active_broker()
+            return True
+        return False
+    
+    def reload_configuration(self):
+        """Reload broker configuration from database"""
+        self.active_broker = self._get_broker_from_env()
+        self._authenticate_active_broker()
     
     def set_active_broker(self, broker_name: str):
         """Set the active broker"""

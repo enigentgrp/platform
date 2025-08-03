@@ -165,85 +165,164 @@ def _show_trading_settings():
         session.close()
 
 def _show_broker_configuration():
-    """Show broker API configuration"""
+    """Show comprehensive broker API configuration"""
     st.subheader("🏦 Broker Configuration")
     
     session = get_session()
     try:
-        brokers = session.query(BrokerageInfo).all()
+        # Get current configuration from environment variables
+        trading_mode_var = session.query(EnvironmentVariable)\
+            .filter(EnvironmentVariable.key == 'TRADING_MODE').first()
+        paper_broker_var = session.query(EnvironmentVariable)\
+            .filter(EnvironmentVariable.key == 'PAPER_TRADING_BROKER').first()
+        live_broker_var = session.query(EnvironmentVariable)\
+            .filter(EnvironmentVariable.key == 'LIVE_TRADING_BROKER').first()
         
-        # Display existing brokers
-        st.write("**Configured Brokers**")
+        current_mode = trading_mode_var.value if trading_mode_var else 'paper'
+        current_paper_broker = paper_broker_var.value if paper_broker_var else 'alpaca_paper'
+        current_live_broker = live_broker_var.value if live_broker_var else 'robinhood'
         
-        broker_data = []
-        for broker in brokers:
-            broker_data.append({
-                "Name": broker.name,
-                "API URL": broker.api_url,
-                "Trading Fees": f"${broker.trading_fees_per_share:.2f}/share, ${broker.trading_fees_per_contract:.2f}/contract",
-                "Day Trade Limit": broker.day_trade_limit,
-                "Status": "Active" if broker.is_active else "Inactive"
-            })
+        # Current active broker display
+        active_broker = current_paper_broker if current_mode == 'paper' else current_live_broker
+        st.success(f"🎯 **Currently Active:** {active_broker} ({'Paper Trading' if current_mode == 'paper' else 'Live Trading'})")
         
-        if broker_data:
-            df = pd.DataFrame(broker_data)
-            st.dataframe(df, use_container_width=True)
-        else:
-            st.info("No brokers configured")
-        
-        # Add/Edit broker form
-        st.write("**Add/Edit Broker**")
+        # Trading mode selection
+        st.write("**Trading Mode Configuration**")
+        trading_mode = st.selectbox(
+            "Trading Mode",
+            ["paper", "live"],
+            index=0 if current_mode == 'paper' else 1,
+            help="Paper trading uses virtual money, Live trading uses real money",
+            key="trading_mode_select"
+        )
         
         col1, col2 = st.columns(2)
         
         with col1:
-            broker_name = st.selectbox(
-                "Select Broker",
-                ["Alpaca", "Robinhood", "Interactive Brokers", "TD Ameritrade"]
+            st.subheader("📄 Paper Trading Broker")
+            paper_broker = st.selectbox(
+                "Paper Trading Broker",
+                ["alpaca_paper", "tradier_paper", "robinhood"],
+                index=["alpaca_paper", "tradier_paper", "robinhood"].index(current_paper_broker) if current_paper_broker in ["alpaca_paper", "tradier_paper", "robinhood"] else 0,
+                key="paper_broker_select"
             )
             
-            api_url = st.text_input(
-                "API URL",
-                value="https://paper-api.alpaca.markets" if broker_name == "Alpaca" else ""
+            # Show broker details
+            broker_details = {
+                'alpaca_paper': "✅ Alpaca Markets - Paper Trading\n• Free real market data\n• $100K virtual portfolio\n• Full API access",
+                'tradier_paper': "⚙️ Tradier - Sandbox Environment\n• Developer friendly\n• Options trading focus\n• Mock implementation",
+                'robinhood': "🚧 Robinhood - Mock Interface\n• Commission free design\n• Future implementation\n• Mock data only"
+            }
+            st.info(broker_details.get(paper_broker, ""))
+        
+        with col2:
+            st.subheader("💰 Live Trading Broker")
+            live_broker = st.selectbox(
+                "Live Trading Broker",
+                ["robinhood", "alpaca_live", "tradier_live"],
+                index=["robinhood", "alpaca_live", "tradier_live"].index(current_live_broker) if current_live_broker in ["robinhood", "alpaca_live", "tradier_live"] else 0,
+                key="live_broker_select"
+            )
+            
+            # Show broker details
+            live_details = {
+                'robinhood': "🚧 Robinhood - Commission Free\n• $0 stock trades\n• $0 options contracts\n• Future implementation",
+                'alpaca_live': "⚠️ Alpaca Markets - Live Trading\n• Real money trades\n• Professional API\n• Requires live API keys",
+                'tradier_live': "💼 Tradier - Professional Platform\n• Advanced options trading\n• Institutional features\n• Future implementation"
+            }
+            st.info(live_details.get(live_broker, ""))
+        
+        # Save configuration button
+        if st.button("💾 Save Broker Configuration", type="primary"):
+            # Update or create environment variables
+            def update_env_var(key: str, value: str):
+                env_var = session.query(EnvironmentVariable)\
+                    .filter(EnvironmentVariable.key == key).first()
+                if env_var:
+                    env_var.value = value
+                else:
+                    env_var = EnvironmentVariable(key=key, value=value)
+                    session.add(env_var)
+            
+            update_env_var('TRADING_MODE', trading_mode)
+            update_env_var('PAPER_TRADING_BROKER', paper_broker)
+            update_env_var('LIVE_TRADING_BROKER', live_broker)
+            
+            session.commit()
+            
+            # Clear broker manager cache to force re-initialization across all pages
+            if 'broker_manager' in st.session_state:
+                del st.session_state['broker_manager']
+            
+            st.success("✅ Broker configuration saved! All pages updated.")
+            st.info("🔄 Dashboard, Trading, and Portfolio pages will now use the new broker.")
+            st.balloons()
+            st.rerun()
+        
+        # Show current broker status
+        st.subheader("📊 Broker Connection Status")
+        
+        try:
+            from services.broker_apis import BrokerManager
+            test_manager = BrokerManager()
+            
+            active_broker_name = test_manager.get_active_broker_name()
+            account_info = test_manager.get_account_info()
+            
+            if 'error' not in account_info:
+                st.success(f"✅ Connected to {active_broker_name}")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Portfolio Value", f"${account_info.get('portfolio_value', 0):,.2f}")
+                with col2:
+                    st.metric("Available Cash", f"${account_info.get('cash', 0):,.2f}")
+                with col3:
+                    st.metric("Account", account_info.get('account_number', 'N/A'))
+            else:
+                st.error(f"❌ Connection failed to {active_broker_name}: {account_info.get('error', 'Unknown error')}")
+        except Exception as e:
+            st.warning(f"Unable to test broker connection: {e}")
+        
+        # Trading fees configuration  
+        st.subheader("💰 Trading Fees Configuration")
+        broker_info = session.query(BrokerageInfo).first()
+        
+        if not broker_info:
+            broker_info = BrokerageInfo(
+                name="Default Broker",
+                trading_fees_per_share=0.01,
+                trading_fees_per_contract=0.65,
+                api_endpoint="https://api.broker.com",
+                is_active=True
+            )
+            session.add(broker_info)
+            session.commit()
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            fees_per_share = st.number_input(
+                "Trading Fees per Share ($)", 
+                value=float(broker_info.trading_fees_per_share),
+                min_value=0.0, 
+                step=0.01,
+                key="broker_fees_per_share"
             )
         
         with col2:
-            trading_fees_per_share = st.number_input(
-                "Trading Fees per Share ($)",
-                min_value=0.0,
-                value=0.0,
-                step=0.01
-            )
-            
-            trading_fees_per_contract = st.number_input(
-                "Trading Fees per Contract ($)",
-                min_value=0.0,
-                value=0.65,
-                step=0.01
-            )
-            
-            day_trade_limit = st.number_input(
-                "Day Trade Limit",
-                min_value=0,
-                value=3
+            fees_per_contract = st.number_input(
+                "Trading Fees per Contract ($)", 
+                value=float(broker_info.trading_fees_per_contract),
+                min_value=0.0, 
+                step=0.01,
+                key="broker_fees_per_contract"
             )
         
-        # API credentials (sensitive information)
-        st.write("**API Credentials**")
-        st.warning("⚠️ API credentials are stored securely and encrypted")
-        
-        col3, col4 = st.columns(2)
-        
-        with col3:
-            api_key = st.text_input("API Key", type="password")
-        
-        with col4:
-            api_secret = st.text_input("API Secret", type="password")
-        
-        col5, col6 = st.columns(2)
-        
-        with col5:
-            is_active = st.checkbox("Active", value=True)
+        if st.button("💰 Save Trading Fees"):
+            broker_info.trading_fees_per_share = fees_per_share
+            broker_info.trading_fees_per_contract = fees_per_contract
+            session.commit()
+            st.success("Trading fees updated successfully!")
         
         with col6:
             if st.button("💾 Save Broker Configuration"):
