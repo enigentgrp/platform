@@ -33,6 +33,9 @@ def show_trading_page():
         st.error("❌ Broker connection failed. Please check Settings > Broker Configuration.")
         return
     
+    # Get active broker name for trading mode display
+    active_broker = broker_manager.get_active_broker_name()
+    
     # Trading controls
     col1, col2, col3 = st.columns([1, 1, 1])
     

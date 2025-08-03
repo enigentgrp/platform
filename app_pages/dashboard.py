@@ -26,6 +26,12 @@ def show_dashboard():
     with st.expander("📈 Connection Health Monitor", expanded=False):
         display_connection_health_chart()
     
+    # Initialize broker manager if not already done
+    if 'broker_manager' not in st.session_state:
+        st.session_state.broker_manager = BrokerManager()
+    
+    broker_manager = st.session_state.broker_manager
+    
     # Get account information from active broker
     account_info = broker_manager.get_account_info()
     
