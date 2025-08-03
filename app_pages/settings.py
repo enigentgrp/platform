@@ -319,15 +319,6 @@ def _show_broker_configuration():
             broker_info.trading_fees_per_contract = fees_per_contract
             session.commit()
             st.success("Trading fees updated successfully!")
-        
-        with col6:
-            if st.button("💾 Save Broker Configuration"):
-                _save_broker_configuration(
-                    session, broker_name, api_url, api_key, api_secret,
-                    trading_fees_per_share, trading_fees_per_contract, day_trade_limit, is_active
-                )
-                st.success(f"Broker {broker_name} configuration saved!")
-                st.rerun()
     
     except Exception as e:
         st.error(f"Error in broker configuration: {e}")
