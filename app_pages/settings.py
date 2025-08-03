@@ -186,9 +186,18 @@ def _show_broker_configuration():
         current_paper_broker = paper_broker_var.value if paper_broker_var else 'alpaca_paper'
         current_live_broker = live_broker_var.value if live_broker_var else 'robinhood'
         
+        # Get real active broker from broker manager for accuracy
+        from services.broker_apis import BrokerManager
+        test_manager = BrokerManager()
+        real_active_broker = test_manager.get_active_broker_name()
+        
         # Current active broker display
         active_broker = current_paper_broker if current_mode == 'paper' else current_live_broker
-        st.success(f"🎯 **Currently Active:** {active_broker} ({'Paper Trading' if current_mode == 'paper' else 'Live Trading'})")
+        st.success(f"🎯 **Currently Active:** {real_active_broker} ({'Paper Trading' if current_mode == 'paper' else 'Live Trading'})")
+        
+        # Show sync status
+        if real_active_broker != active_broker:
+            st.warning(f"⚠️ Configuration sync needed. Database shows '{active_broker}' but system is using '{real_active_broker}'")
         
         # Trading mode selection
         st.write("**Trading Mode Configuration**")
