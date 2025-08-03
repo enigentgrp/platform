@@ -50,7 +50,16 @@ def show_portfolio_page():
 def _show_portfolio_overview():
     """Display portfolio overview metrics"""
     session = get_session()
-    broker_manager = BrokerManager()
+    
+    # Use centralized broker manager
+    if 'broker_manager' not in st.session_state:
+        st.session_state.broker_manager = BrokerManager()
+    
+    broker_manager = st.session_state.broker_manager
+    
+    # Display current broker info
+    active_broker = broker_manager.get_active_broker_name()
+    st.info(f"🎯 Data from: {active_broker}")
     
     try:
         # Get account information

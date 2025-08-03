@@ -19,25 +19,31 @@ def show_trading_page():
         st.info("Viewers can only access Dashboard, Portfolio (read-only), and AI Assistant.")
         return
     
-    # Initialize Alpaca broker connection
+    # Initialize broker manager with centralized configuration
     if 'broker_manager' not in st.session_state:
         st.session_state.broker_manager = BrokerManager()
     
     broker_manager = st.session_state.broker_manager
     
+    # Display current broker info and connection status
+    active_broker = broker_manager.get_active_broker_name()
+    st.info(f"🎯 Active Broker: {active_broker}")
+    
     # Check connection status
     alpaca_api = broker_manager.get_active_broker()
     if not alpaca_api.authenticated:
-        st.error("❌ Not connected to Alpaca. Check API credentials.")
+        st.error(f"❌ Not connected to {active_broker}. Check API credentials.")
         return
     else:
-        st.success("✅ Connected to Alpaca Paper Trading")
+        st.success(f"✅ Connected to {active_broker}")
     
     # Trading controls
     col1, col2, col3 = st.columns([1, 1, 1])
     
     with col1:
-        trading_mode = st.selectbox("Mode", ["Paper Trading"], disabled=True)
+        # Show current trading mode from broker configuration
+        current_mode = "Paper Trading" if "paper" in active_broker else "Live Trading"
+        trading_mode = st.selectbox("Mode", [current_mode], disabled=True)
     
     with col2:
         auto_trading = st.toggle("Auto Trading", value=False)
