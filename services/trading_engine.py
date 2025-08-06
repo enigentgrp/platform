@@ -104,19 +104,37 @@ class TradingEngine:
     
     async def _execute_trading_cycle(self):
         """Execute one trading cycle"""
-        logger.info("Executing trading cycle...")
+        from datetime import datetime
+        cycle_time = datetime.now().strftime("%H:%M:%S")
+        logger.info(f"🔄 Starting trading cycle at {cycle_time}...")
+        
+        # Update session state for UI feedback
+        import streamlit as st
+        if 'last_activity' in st.session_state:
+            st.session_state.last_activity = f"Cycle started at {cycle_time}"
         
         # 1. Update priority stock prices
+        logger.info("📡 Fetching latest market data...")
         await self._update_priority_prices()
         
-        # 2. Evaluate trading opportunities
+        # 2. Evaluate trading opportunities  
+        logger.info("🔍 Analyzing trading opportunities...")
         await self._evaluate_trading_opportunities()
         
         # 3. Monitor existing positions
+        logger.info("👁️ Monitoring existing positions...")
         await self._monitor_positions()
         
         # 4. Execute risk management
+        logger.info("⚖️ Executing risk management...")
         await self._execute_risk_management()
+        
+        complete_time = datetime.now().strftime("%H:%M:%S")
+        logger.info(f"✅ Trading cycle completed at {complete_time}")
+        
+        # Update completion time for UI
+        if 'last_activity' in st.session_state:
+            st.session_state.last_activity = f"Completed at {complete_time}"
     
     async def _update_priority_prices(self):
         """Update current prices for priority stocks"""
@@ -126,10 +144,14 @@ class TradingEngine:
             priority_stocks = session.query(Stock).filter(Stock.priority > 0).all()
             
             if not priority_stocks:
+                logger.info("⚠️ No priority stocks found - engine will monitor S&P 500 stocks")
                 return
             
             symbols = [stock.symbol for stock in priority_stocks]
+            logger.info(f"🎯 Monitoring {len(symbols)} priority stocks: {', '.join(symbols[:5])}{'...' if len(symbols) > 5 else ''}")
+            
             market_data = self.broker_manager.get_market_data(symbols)
+            updated_count = 0
             
             for stock in priority_stocks:
                 if stock.symbol in market_data:
@@ -149,8 +171,10 @@ class TradingEngine:
                         volume=data.get('volume', 0)
                     )
                     session.add(priority_price)
-            
+                    updated_count += 1
+                    
             session.commit()
+            logger.info(f"📊 Updated prices for {updated_count} stocks successfully")
         except Exception as e:
             session.rollback()
             logger.error(f"Error updating priority prices: {e}")

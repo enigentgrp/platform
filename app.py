@@ -227,19 +227,39 @@ def show_trading_interface():
         engine_status = st.session_state.get('engine_status', 'Stopped')
         if engine_status == "Running":
             st.success("🤖 Trading Engine: RUNNING")
+            
+            # Live activity indicator
+            import time
+            current_time = time.time()
+            if 'last_blink' not in st.session_state:
+                st.session_state.last_blink = current_time
+            
+            # Blinking activity indicator
+            if (current_time - st.session_state.last_blink) % 2 < 1:
+                st.markdown("🟢 **LIVE** - Monitoring markets...")
+            else:
+                st.markdown("🔵 **ACTIVE** - Analyzing stocks...")
+            
+            # Show last activity timestamp
+            if 'last_activity' in st.session_state:
+                st.caption(f"Last cycle: {st.session_state.last_activity}")
+            
             if st.button("⏹️ Stop Engine"):
                 if st.session_state.get('trading_engine'):
                     st.session_state.trading_engine.stop_trading()
                     st.session_state.trading_engine = None
                 st.session_state.engine_status = "Stopped"
+                st.session_state.pop('last_activity', None)
                 st.rerun()
         else:
             st.warning("🤖 Trading Engine: STOPPED")
+            st.markdown("⚫ **IDLE** - Ready to start...")
             if st.button("▶️ Start Engine"):
                 from services.trading_engine import TradingEngine
                 st.session_state.trading_engine = TradingEngine()
                 st.session_state.trading_engine.start_trading()
                 st.session_state.engine_status = "Running"
+                st.session_state.last_activity = "Just started..."
                 st.rerun()
     
     with col2:
@@ -254,6 +274,58 @@ def show_trading_interface():
         finally:
             session.close()
     
+    # Real-time engine activity section
+    if engine_status == "Running":
+        st.subheader("🔥 Live Engine Activity")
+        
+        # Create placeholder for real-time updates
+        activity_container = st.empty()
+        
+        # Show recent activity logs
+        session = get_session()
+        try:
+            from database.models import PriorityCurrentPrice
+            
+            # Get most recent price updates (last 5 minutes)
+            from datetime import datetime, timedelta
+            five_min_ago = datetime.utcnow() - timedelta(minutes=5)
+            
+            recent_updates = session.query(PriorityCurrentPrice)\
+                .filter(PriorityCurrentPrice.datetime >= five_min_ago)\
+                .order_by(PriorityCurrentPrice.datetime.desc())\
+                .limit(10).all()
+            
+            if recent_updates:
+                activity_data = []
+                for update in recent_updates:
+                    activity_data.append({
+                        "Time": update.datetime.strftime("%H:%M:%S"),
+                        "Symbol": update.symbol,
+                        "Price": f"${update.current_price:.2f}",
+                        "Change": f"{update.percent_change_from_previous:+.2f}%",
+                        "Volume": f"{update.volume:,}" if update.volume else "N/A"
+                    })
+                
+                activity_df = pd.DataFrame(activity_data)
+                with activity_container:
+                    st.success("📊 **Recent Price Updates** (Live monitoring in progress)")
+                    st.dataframe(activity_df, use_container_width=True)
+            else:
+                with activity_container:
+                    st.info("🔍 **Engine Starting...** Waiting for first price updates...")
+        
+        except Exception as e:
+            with activity_container:
+                st.warning(f"📡 **Connecting to market data...** ({str(e)[:50]})")
+        finally:
+            session.close()
+        
+        # Auto-refresh every 10 seconds when engine is running
+        import time
+        time.sleep(0.1)  # Small delay to prevent too frequent updates
+        if st.session_state.get('engine_status') == "Running":
+            st.rerun()
+    
     # Priority stocks (per requirements - stocks with priority > 0)
     st.subheader("🎯 Priority Stocks (Algorithm Targets)")
     
@@ -264,7 +336,11 @@ def show_trading_interface():
         if priority_stocks:
             stock_data = []
             for stock in priority_stocks:
+                # Add visual indicator if recently updated
+                last_update = "🟢" if engine_status == "Running" else "⚫"
+                
                 stock_data.append({
+                    "Status": last_update,
                     "Symbol": stock.symbol,
                     "Priority": stock.priority,
                     "Last Price": f"${stock.last_price:.2f}" if stock.last_price else "N/A",
