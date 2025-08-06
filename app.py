@@ -278,7 +278,12 @@ def show_positions_page():
 
 def show_settings_page():
     """Environment variables configuration per requirements"""
-    st.title("⚙️ Settings - Environment Variables")
+    user = st.session_state.user
+    
+    if user.role == 'admin':
+        st.title("⚙️ Settings - Environment Variables")
+    else:
+        st.title("⚙️ Trading Settings")
     
     session = get_session()
     try:
@@ -295,6 +300,7 @@ def show_settings_page():
         current_broker = st.session_state.broker_manager.get_active_broker_name()
         st.info(f"🔄 **Current Active Broker**: {current_broker.replace('_', ' ').title()}")
         
+        # Broker and trading mode - available to traders and admins
         col1, col2 = st.columns(2)
         
         with col1:
@@ -302,47 +308,64 @@ def show_settings_page():
             active_broker = st.selectbox(
                 "Active Broker",
                 ["alpaca", "robinhood"],
-                index=0 if env_vars.get('ACTIVE_BROKER', 'alpaca') == 'alpaca' else 1
+                index=0 if env_vars.get('ACTIVE_BROKER', 'alpaca') == 'alpaca' else 1,
+                help="Switch between different broker platforms for trading"
             )
             
             trading_mode = st.selectbox(
                 "Trading Mode (Paper/Live)",
                 ["paper", "live"],
-                index=0 if env_vars.get('TRADING_MODE', 'paper') == 'paper' else 1
-            )
-            
-            price_interval = st.number_input(
-                "Price Update Interval (seconds)",
-                min_value=5,
-                max_value=300,
-                value=int(env_vars.get('PRICE_UPDATE_INTERVAL', '30'))
+                index=0 if env_vars.get('TRADING_MODE', 'paper') == 'paper' else 1,
+                help="Paper trading uses simulated money, Live trading uses real money"
             )
         
-        with col2:
-            max_position = st.number_input(
-                "Max Position Size (%)",
-                min_value=1.0,
-                max_value=25.0,
-                value=float(env_vars.get('MAX_POSITION_SIZE_PERCENT', '5.0')),
-                step=0.5
-            )
-            
-            archive_days = st.number_input(
-                "Archive Retention (days)",
-                min_value=7,
-                max_value=365,
-                value=int(env_vars.get('ARCHIVE_RETENTION_DAYS', '30'))
-            )
+        # Advanced settings - admin only
+        if user.role == 'admin':
+            with col2:
+                price_interval = st.number_input(
+                    "Price Update Interval (seconds)",
+                    min_value=5,
+                    max_value=300,
+                    value=int(env_vars.get('PRICE_UPDATE_INTERVAL', '30'))
+                )
+                
+            col3, col4 = st.columns(2)
+            with col3:
+                max_position = st.number_input(
+                    "Max Position Size (%)",
+                    min_value=1.0,
+                    max_value=25.0,
+                    value=float(env_vars.get('MAX_POSITION_SIZE_PERCENT', '5.0')),
+                    step=0.5
+                )
+                
+            with col4:
+                archive_days = st.number_input(
+                    "Archive Retention (days)",
+                    min_value=7,
+                    max_value=365,
+                    value=int(env_vars.get('ARCHIVE_RETENTION_DAYS', '30'))
+                )
         
         if st.button("Save Settings"):
-            # Update environment variables
-            for key, value in [
-                ('ACTIVE_BROKER', active_broker),
-                ('TRADING_MODE', trading_mode),
-                ('PRICE_UPDATE_INTERVAL', str(price_interval)),
-                ('MAX_POSITION_SIZE_PERCENT', str(max_position)),
-                ('ARCHIVE_RETENTION_DAYS', str(archive_days))
-            ]:
+            # Update environment variables based on user role
+            if user.role == 'admin':
+                # Admin can change all settings
+                updates = [
+                    ('ACTIVE_BROKER', active_broker),
+                    ('TRADING_MODE', trading_mode),
+                    ('PRICE_UPDATE_INTERVAL', str(price_interval)),
+                    ('MAX_POSITION_SIZE_PERCENT', str(max_position)),
+                    ('ARCHIVE_RETENTION_DAYS', str(archive_days))
+                ]
+            else:
+                # Traders can only change broker and trading mode
+                updates = [
+                    ('ACTIVE_BROKER', active_broker),
+                    ('TRADING_MODE', trading_mode)
+                ]
+            
+            for key, value in updates:
                 env_var = session.query(EnvironmentVariable).filter(EnvironmentVariable.key == key).first()
                 if env_var:
                     env_var.value = value
@@ -404,9 +427,12 @@ def sidebar_navigation():
             "Positions": "💼"
         }
         
-        # Admin-only pages
-        if user.role == 'admin':
+        # Trader and Admin pages
+        if user.role in ['admin', 'trader']:
             pages["Settings"] = "⚙️"
+            
+        # Admin-only pages  
+        if user.role == 'admin':
             pages["Database"] = "🗄️"
         
         selected_page = st.sidebar.radio(

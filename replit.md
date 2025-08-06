@@ -25,6 +25,7 @@ Preferred communication style: Simple, everyday language.
 - **Environment Variables**: Core trading configuration (paper/live mode, intervals, position sizing)
 - **Database Access**: Admin users can access database management interface
 - **Multi-broker Support**: RobinHood and Alpaca API integration preserved
+- **Broker Switching**: Traders can switch broker platforms in Settings (admins get full config access)
 
 ## AI-Powered Features (Removed)
 - AI Assistant feature removed per user request
