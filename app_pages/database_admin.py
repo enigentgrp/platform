@@ -323,9 +323,9 @@ def render_priority_system(session, db_service):
             price_data.append({
                 "Symbol": price.symbol,
                 "DateTime": price.datetime.strftime("%Y-%m-%d %H:%M:%S"),
-                "Current Price": f"${float(price.current_price):.2f}",
-                "Change from Previous": f"{float(price.percent_change_from_previous):.2f}%",
-                "Change from Open": f"{float(price.percent_change_from_open):.2f}%",
+                "Current Price": f"${float(price.current_price):.2f}" if price.current_price is not None else "N/A",
+                "Change from Previous": f"{float(price.percent_change_from_previous):.2f}%" if price.percent_change_from_previous is not None else "N/A",
+                "Change from Open": f"{float(price.percent_change_from_open):.2f}%" if price.percent_change_from_open is not None else "N/A",
                 "Volume": f"{price.volume:,}" if price.volume else "N/A"
             })
         
