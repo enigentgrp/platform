@@ -151,7 +151,12 @@ def show_positions_page():
     try:
         # Get live positions from active broker
         from services.broker_apis import BrokerManager
-        broker_manager = BrokerManager()
+        
+        # Use cached broker manager or create new one
+        if 'broker_manager' not in st.session_state:
+            st.session_state.broker_manager = BrokerManager()
+        
+        broker_manager = st.session_state.broker_manager
         broker_manager.authenticate_all()
         
         # Show live broker positions
@@ -282,6 +287,14 @@ def show_settings_page():
         
         st.subheader("Trading Configuration")
         
+        # Show current broker status
+        from services.broker_apis import BrokerManager
+        if 'broker_manager' not in st.session_state:
+            st.session_state.broker_manager = BrokerManager()
+        
+        current_broker = st.session_state.broker_manager.get_active_broker_name()
+        st.info(f"🔄 **Current Active Broker**: {current_broker.replace('_', ' ').title()}")
+        
         col1, col2 = st.columns(2)
         
         with col1:
@@ -338,7 +351,32 @@ def show_settings_page():
                     session.add(env_var)
             
             session.commit()
-            st.success("Environment variables updated!")
+            
+            # Immediately update the broker manager
+            try:
+                if 'broker_manager' in st.session_state:
+                    st.session_state.broker_manager.reload_configuration()
+                else:
+                    st.session_state.broker_manager = BrokerManager()
+                
+                # Test the new broker connection
+                new_broker = st.session_state.broker_manager.get_active_broker_name()
+                st.success(f"✅ Settings updated! Switched to {new_broker.replace('_', ' ').title()}")
+                
+                # Show connection test
+                with st.spinner("Testing new broker connection..."):
+                    try:
+                        account_info = st.session_state.broker_manager.get_account_info()
+                        if account_info and not account_info.get('error'):
+                            st.success(f"✅ Connection successful! Cash: ${account_info.get('cash', 0):,.2f}")
+                        else:
+                            st.warning("⚠️ Connection test failed - check broker credentials")
+                    except Exception as conn_error:
+                        st.warning(f"⚠️ Connection test error: {conn_error}")
+                        
+            except Exception as e:
+                st.error(f"❌ Error switching broker: {e}")
+            
             st.rerun()
     
     finally:
