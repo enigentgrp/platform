@@ -1,6 +1,6 @@
 # Overview
 
-This is an algorithmic trading platform for stocks and stock options built with Streamlit for the web interface and SQLAlchemy for database management. The platform supports multiple users with role-based permissions, integrates with multiple brokers (RobinHood and Alpaca), and provides automated trading capabilities based on technical indicators. The system focuses on S&P 500 stocks with actively traded options and uses momentum-based trading strategies for both call and put options.
+This is Foundation - an algorithmic trading platform for stocks and stock options built with Streamlit for the web interface and SQLAlchemy for database management. The platform supports multiple users with role-based permissions, integrates with multiple brokers (RobinHood and Alpaca), and provides automated trading capabilities based on technical indicators. The system focuses on S&P 500 stocks with actively traded options and uses momentum-based trading strategies for both call and put options.
 
 # User Preferences
 
@@ -8,12 +8,14 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (August 2025)
 
-## Streamlined Application (Latest - August 2025)
+## Foundation Platform Updates (Latest - August 2025)
+- **Rebranded to Foundation**: Changed platform name with Jesus background and beautiful button styling
+- **Enhanced Visual Design**: Custom CSS with gradient buttons, holy theme, and spiritual aesthetics
 - **Completely Streamlined Interface**: Removed all extra features not in original requirements
 - **Core Navigation Only**: Trading, Orders, Positions (admin gets Settings and Database access)
 - **Simplified Authentication**: Basic login with role-based access (admin/trader/viewer roles preserved)
 - **Focus on Requirements**: Strictly following original document specifications
-- **Removed Features**: AI Assistant, complex dashboards, unnecessary visualizations, and bloated interfaces
+- **Trader Broker Access**: Traders can now switch broker platforms in Settings page
 - **Core Functionality Preserved**: All algorithmic trading logic, database tables, broker APIs remain intact
 - **Clean Code**: Streamlined app.py with only essential functions matching requirements
 

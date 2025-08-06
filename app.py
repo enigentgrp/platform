@@ -5,10 +5,135 @@ from database.models import User, EnvironmentVariable, Order, TransactionLog, St
 
 # Page configuration
 st.set_page_config(
-    page_title="Algorithmic Trading Platform",
-    page_icon="📈",
+    page_title="Foundation",
+    page_icon="✝️",
     layout="wide"
 )
+
+# Custom CSS for Jesus background and pretty buttons
+st.markdown("""
+<style>
+/* Main background with Jesus image */
+.main {
+    background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                      url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+/* Beautiful buttons */
+.stButton > button {
+    background: linear-gradient(45deg, #ff6b35, #f7931e);
+    color: white !important;
+    border: none;
+    border-radius: 25px;
+    padding: 0.5rem 2rem;
+    font-weight: bold;
+    font-size: 1rem;
+    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stButton > button:hover {
+    background: linear-gradient(45deg, #f7931e, #ff6b35);
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+    transform: translateY(-2px);
+}
+
+.stButton > button:active {
+    transform: translateY(0px);
+    box-shadow: 0 2px 10px rgba(255, 107, 53, 0.8);
+}
+
+/* Form submit buttons */
+.stFormSubmitButton > button {
+    background: linear-gradient(45deg, #28a745, #20c997) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 25px !important;
+    padding: 0.75rem 3rem !important;
+    font-weight: bold !important;
+    font-size: 1.1rem !important;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4) !important;
+    transition: all 0.3s ease !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+}
+
+.stFormSubmitButton > button:hover {
+    background: linear-gradient(45deg, #20c997, #28a745) !important;
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Sidebar styling */
+.css-1d391kg {
+    background: linear-gradient(180deg, #1f1f2e, #16213e);
+    border-right: 2px solid #ff6b35;
+}
+
+/* Title styling */
+h1 {
+    color: #fafafa !important;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    font-family: 'serif' !important;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+/* Cards and containers */
+.stMetric {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+/* Input fields */
+.stTextInput > div > div > input {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid #ff6b35;
+    border-radius: 10px;
+    color: white !important;
+}
+
+.stSelectbox > div > div > select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid #ff6b35;
+    border-radius: 10px;
+    color: white !important;
+}
+
+/* Success/error messages */
+.stSuccess {
+    background: rgba(40, 167, 69, 0.2);
+    border: 1px solid #28a745;
+    border-radius: 10px;
+}
+
+.stError {
+    background: rgba(220, 53, 69, 0.2);
+    border: 1px solid #dc3545;
+    border-radius: 10px;
+}
+
+.stWarning {
+    background: rgba(255, 193, 7, 0.2);
+    border: 1px solid #ffc107;
+    border-radius: 10px;
+}
+
+.stInfo {
+    background: rgba(255, 107, 53, 0.2);
+    border: 1px solid #ff6b35;
+    border-radius: 10px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 def initialize_session_state():
     """Initialize session state variables"""
@@ -32,7 +157,7 @@ def authenticate_user(username, password):
 
 def show_login_page():
     """Simple login form"""
-    st.title("🔐 Trading Platform Login")
+    st.title("✝️ Foundation - Login")
     
     with st.form("login_form"):
         username = st.text_input("Username")
@@ -407,7 +532,7 @@ def show_settings_page():
 
 def sidebar_navigation():
     """Streamlined navigation per requirements"""
-    st.sidebar.title("📈 Trading Platform")
+    st.sidebar.title("✝️ Foundation")
     
     if st.session_state.authenticated:
         user = st.session_state.user
