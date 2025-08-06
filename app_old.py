@@ -1,45 +1,47 @@
 import streamlit as st
 import pandas as pd
-from database.database import get_session
-from database.models import User, EnvironmentVariable, Order, TransactionLog, Stock
+from datetime import datetime, timedelta
+import asyncio
+import threading
+import time
 
-# Page configuration
+# Import custom modules
+from database.database import init_database, get_session
+from database.models import User, EnvironmentVariable, Stock, Account
+from utils.auth import authenticate_user, get_current_user, check_permission
+from services.data_fetcher import DataFetcher
+from services.trading_engine import TradingEngine
+from services.technical_indicators import TechnicalIndicators
+from utils.helpers import format_currency, calculate_portfolio_value
+
+# Initialize database
+init_database()
+
+# Configure page
 st.set_page_config(
     page_title="Algorithmic Trading Platform",
     page_icon="📈",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-def initialize_session_state():
-    """Initialize session state variables"""
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-    if 'user' not in st.session_state:
-        st.session_state.user = None
-    if 'engine_status' not in st.session_state:
-        st.session_state.engine_status = 'Stopped'
+# Session state initialization
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+if 'user' not in st.session_state:
+    st.session_state.user = None
+if 'trading_engine' not in st.session_state:
+    st.session_state.trading_engine = None
 
-def authenticate_user(username, password):
-    """Authenticate user against database"""
-    session = get_session()
-    try:
-        user = session.query(User).filter(User.username == username).first()
-        if user and user.check_password(password):
-            return user
-        return None
-    finally:
-        session.close()
-
-def show_login_page():
-    """Simple login form"""
-    st.title("🔐 Trading Platform Login")
+def login_page():
+    st.title("🔐 Login")
     
     with st.form("login_form"):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
-        submit = st.form_submit_button("Login")
+        submitted = st.form_submit_button("Login")
         
-        if submit:
+        if submitted:
             user = authenticate_user(username, password)
             if user:
                 st.session_state.authenticated = True
@@ -47,71 +49,51 @@ def show_login_page():
                 st.success("Login successful!")
                 st.rerun()
             else:
-                st.error("Invalid credentials")
+                st.error("Invalid username or password")
 
-def show_trading_interface():
-    """Core trading interface per requirements"""
-    st.title("💹 Algorithmic Trading System")
+def sidebar_navigation():
+    st.sidebar.title("📈 Trading Platform")
     
-    # Trading engine controls
-    col1, col2 = st.columns(2)
-    
-    with col1:
+    if st.session_state.authenticated:
+        user = st.session_state.user
+        st.sidebar.write(f"👤 Welcome, {user.username}")
+        st.sidebar.write(f"🏷️ Role: {user.role}")
+        
+        # Show engine status in sidebar
         engine_status = st.session_state.get('engine_status', 'Stopped')
         if engine_status == "Running":
-            st.success("🤖 Trading Engine: RUNNING")
-            if st.button("⏹️ Stop Engine"):
-                if st.session_state.get('trading_engine'):
-                    st.session_state.trading_engine.stop_trading()
-                    st.session_state.trading_engine = None
-                st.session_state.engine_status = "Stopped"
-                st.rerun()
+            st.sidebar.success("🤖 Engine: RUNNING")
         else:
-            st.warning("🤖 Trading Engine: STOPPED")
-            if st.button("▶️ Start Engine"):
-                from services.trading_engine import TradingEngine
-                st.session_state.trading_engine = TradingEngine()
-                st.session_state.trading_engine.start_trading()
-                st.session_state.engine_status = "Running"
-                st.rerun()
-    
-    with col2:
-        # Trading mode from environment variables
-        session = get_session()
-        try:
-            mode_var = session.query(EnvironmentVariable).filter(
-                EnvironmentVariable.key == 'TRADING_MODE'
-            ).first()
-            current_mode = mode_var.value if mode_var else 'paper'
-            st.info(f"Mode: {current_mode.upper()}")
-        finally:
-            session.close()
-    
-    # Priority stocks (per requirements - stocks with priority > 0)
-    st.subheader("🎯 Priority Stocks (Algorithm Targets)")
-    
-    session = get_session()
-    try:
-        priority_stocks = session.query(Stock).filter(Stock.priority > 0).order_by(Stock.priority.desc()).all()
+            st.sidebar.warning("🤖 Engine: STOPPED")
         
-        if priority_stocks:
-            stock_data = []
-            for stock in priority_stocks:
-                stock_data.append({
-                    "Symbol": stock.symbol,
-                    "Priority": stock.priority,
-                    "Last Price": f"${stock.last_price:.2f}" if stock.last_price else "N/A",
-                    "Change %": f"{stock.change_percent:.2f}%" if stock.change_percent else "N/A",
-                    "Has Options": "Yes" if stock.has_options else "No",
-                    "Sector": stock.sector
-                })
-            
-            df = pd.DataFrame(stock_data)
-            st.dataframe(df, use_container_width=True)
-        else:
-            st.info("No priority stocks. Engine will identify trading opportunities automatically.")
-    finally:
-        session.close()
+        # Core navigation menu
+        pages = {
+            "Trading": "💹",
+            "Orders": "📋", 
+            "Positions": "💼"
+        }
+        
+        # Add admin pages
+        if user.role == 'admin':
+            pages["Settings"] = "⚙️"
+            pages["Database"] = "🗄️"
+        
+        selected_page = st.sidebar.radio(
+            "Navigation",
+            list(pages.keys()),
+            format_func=lambda x: f"{pages[x]} {x}"
+        )
+        
+        # Logout button
+        if st.sidebar.button("🚪 Logout"):
+            st.session_state.authenticated = False
+            st.session_state.user = None
+            st.session_state.trading_engine = None
+            st.rerun()
+        
+        return selected_page
+    
+    return None
 
 def show_orders_page():
     """Display orders table per requirements"""
@@ -144,12 +126,15 @@ def show_orders_page():
         session.close()
 
 def show_positions_page():
-    """Display positions and transaction log with LIFO gain/loss"""
+    """Display current positions and transaction log"""
     st.title("💼 Positions & Transaction Log")
+    
+    # Current positions
+    st.subheader("Current Positions")
     
     session = get_session()
     try:
-        # Calculate current positions from transaction log
+        # Calculate positions from transaction log
         transactions = session.query(TransactionLog).order_by(TransactionLog.transaction_date).all()
         
         positions = {}
@@ -180,8 +165,7 @@ def show_positions_page():
             if pos['quantity'] > 0:
                 pos['avg_price'] = pos['total_cost'] / pos['quantity']
         
-        # Show current positions
-        st.subheader("Current Positions")
+        # Filter non-zero positions
         active_positions = [pos for pos in positions.values() if pos['quantity'] != 0]
         
         if active_positions:
@@ -202,8 +186,8 @@ def show_positions_page():
         else:
             st.info("No current positions.")
         
-        # Transaction log with LIFO gain/loss calculations
-        st.subheader("Transaction Log (LIFO Gain/Loss)")
+        # Transaction log with LIFO gain/loss
+        st.subheader("Transaction Log (LIFO)")
         
         recent_transactions = session.query(TransactionLog).order_by(TransactionLog.transaction_date.desc()).limit(50).all()
         
@@ -218,7 +202,7 @@ def show_positions_page():
                     "Quantity": transaction.quantity,
                     "Price": f"${transaction.price:.2f}",
                     "Total": f"${transaction.price * transaction.quantity:.2f}",
-                    "LIFO P&L": f"${transaction.gain_loss:.2f}" if transaction.gain_loss else "N/A"
+                    "P&L": f"${transaction.gain_loss:.2f}" if transaction.gain_loss else "N/A"
                 })
             
             df = pd.DataFrame(trans_data)
@@ -230,12 +214,12 @@ def show_positions_page():
         session.close()
 
 def show_settings_page():
-    """Environment variables configuration per requirements"""
-    st.title("⚙️ Settings - Environment Variables")
+    """Basic environment variables configuration"""
+    st.title("⚙️ Settings")
     
     session = get_session()
     try:
-        # Get current environment variables
+        # Get environment variables
         env_vars = {var.key: var.value for var in session.query(EnvironmentVariable).all()}
         
         st.subheader("Trading Configuration")
@@ -244,7 +228,7 @@ def show_settings_page():
         
         with col1:
             trading_mode = st.selectbox(
-                "Trading Mode (Paper/Live)",
+                "Trading Mode",
                 ["paper", "live"],
                 index=0 if env_vars.get('TRADING_MODE', 'paper') == 'paper' else 1
             )
@@ -288,55 +272,14 @@ def show_settings_page():
                     session.add(env_var)
             
             session.commit()
-            st.success("Environment variables updated!")
+            st.success("Settings saved!")
             st.rerun()
     
     finally:
         session.close()
 
-def sidebar_navigation():
-    """Streamlined navigation per requirements"""
-    st.sidebar.title("📈 Trading Platform")
-    
-    if st.session_state.authenticated:
-        user = st.session_state.user
-        st.sidebar.write(f"👤 {user.username} ({user.role})")
-        
-        # Show engine status
-        engine_status = st.session_state.get('engine_status', 'Stopped')
-        if engine_status == "Running":
-            st.sidebar.success("🤖 Engine: RUNNING")
-        else:
-            st.sidebar.warning("🤖 Engine: STOPPED")
-        
-        # Core navigation per original requirements
-        pages = {
-            "Trading": "💹",
-            "Orders": "📋", 
-            "Positions": "💼"
-        }
-        
-        # Admin-only pages
-        if user.role == 'admin':
-            pages["Settings"] = "⚙️"
-            pages["Database"] = "🗄️"
-        
-        selected_page = st.sidebar.radio(
-            "Navigation",
-            list(pages.keys()),
-            format_func=lambda x: f"{pages[x]} {x}"
-        )
-        
-        # Logout
-        if st.sidebar.button("🚪 Logout"):
-            st.session_state.authenticated = False
-            st.session_state.user = None
-            st.session_state.trading_engine = None
-            st.rerun()
-        
-        return selected_page
-    
-    return None
+# Remove old dashboard function - now using streamlined functions above
+
 
 def load_page_content(page_name):
     """Load core trading functionality only"""
@@ -354,16 +297,34 @@ def load_page_content(page_name):
 
 def main():
     """Main application entry point"""
-    initialize_session_state()
     
     if not st.session_state.authenticated:
-        show_login_page()
+        login_page()
         return
     
-    # Show sidebar and load selected page
+    # Show sidebar navigation
     selected_page = sidebar_navigation()
+    
     if selected_page:
         load_page_content(selected_page)
+    
+    # Background tasks status
+    with st.sidebar:
+        st.divider()
+        st.subheader("🔄 Background Tasks")
+        
+        # Data fetcher status
+        if st.button("🔄 Refresh Market Data"):
+            with st.spinner("Fetching market data..."):
+                try:
+                    data_fetcher = DataFetcher()
+                    data_fetcher.update_priority_stocks()
+                    st.success("Market data updated!")
+                except Exception as e:
+                    st.error(f"Error updating data: {str(e)}")
+        
+        # Show last update time
+        st.caption("Last update: 2 minutes ago")
 
 if __name__ == "__main__":
     main()

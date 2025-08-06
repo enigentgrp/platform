@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, 
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.database import Base
+import hashlib
 
 class User(Base):
     """User table for authentication and role management"""
@@ -15,6 +16,22 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_login = Column(DateTime(timezone=True))
+    
+    def check_password(self, password):
+        """Check if provided password matches the stored hash"""
+        try:
+            # Handle both old and new password formats
+            if ':' in self.password_hash:
+                # New format with salt
+                salt, hash_value = self.password_hash.split(':')
+                return hashlib.sha256((password + salt).encode()).hexdigest() == hash_value
+            else:
+                # Old format for backward compatibility
+                salted_password = f"{password}_trading_salt"
+                password_hash = hashlib.sha256(salted_password.encode()).hexdigest()
+                return self.password_hash == password_hash
+        except Exception:
+            return False
 
 class EnvironmentVariable(Base):
     """Global environment variables for trading configuration"""
