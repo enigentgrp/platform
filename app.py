@@ -243,6 +243,13 @@ def show_settings_page():
         col1, col2 = st.columns(2)
         
         with col1:
+            # Broker selection
+            active_broker = st.selectbox(
+                "Active Broker",
+                ["alpaca", "robinhood"],
+                index=0 if env_vars.get('ACTIVE_BROKER', 'alpaca') == 'alpaca' else 1
+            )
+            
             trading_mode = st.selectbox(
                 "Trading Mode (Paper/Live)",
                 ["paper", "live"],
@@ -275,6 +282,7 @@ def show_settings_page():
         if st.button("Save Settings"):
             # Update environment variables
             for key, value in [
+                ('ACTIVE_BROKER', active_broker),
                 ('TRADING_MODE', trading_mode),
                 ('PRICE_UPDATE_INTERVAL', str(price_interval)),
                 ('MAX_POSITION_SIZE_PERCENT', str(max_position)),
