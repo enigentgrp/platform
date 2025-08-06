@@ -116,7 +116,7 @@ def render_environment_variables(session):
                 "Value": var.value,
                 "Type": var.variable_type,
                 "System": "✓" if var.is_system else "",
-                "Description": var.description[:50] + "..." if len(var.description) > 50 else var.description
+                "Description": (var.description[:50] + "..." if var.description and len(var.description) > 50 else (var.description or "N/A"))
             })
         
         df = pd.DataFrame(env_data)
