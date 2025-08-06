@@ -198,7 +198,7 @@ def render_stock_management(session):
     
     with col1:
         normal_stocks = session.query(Stock).filter(Stock.priority == 0).count()
-        st.metric("Normal Stocks (Priority 0)", normal_stocks)
+        st.metric("S&P 500 Stocks (Priority 0)", normal_stocks)
     
     with col2:
         priority_stocks = session.query(Stock).filter(Stock.priority == 1).count()
@@ -210,8 +210,10 @@ def render_stock_management(session):
     
     st.divider()
     
+    st.info("📋 **Stock Universe**: S&P 500 companies with actively traded options + Sector ETFs")
+    
     # Display stocks by category
-    category = st.selectbox("Select Category", ["All Stocks", "Priority Stocks (1)", "Sector ETFs (9)", "Normal Stocks (0)"])
+    category = st.selectbox("Select Category", ["All Stocks", "Priority Stocks (1)", "Sector ETFs (9)", "Normal S&P 500 (0)"])
     
     if category == "All Stocks":
         stocks = session.query(Stock).order_by(Stock.priority.desc(), Stock.symbol).all()
@@ -219,7 +221,7 @@ def render_stock_management(session):
         stocks = session.query(Stock).filter(Stock.priority == 1).order_by(Stock.symbol).all()
     elif category == "Sector ETFs (9)":
         stocks = session.query(Stock).filter(Stock.priority == 9).order_by(Stock.symbol).all()
-    else:  # Normal Stocks (0)
+    else:  # Normal S&P 500 (0)
         stocks = session.query(Stock).filter(Stock.priority == 0).order_by(Stock.symbol).all()
     
     if stocks:
@@ -233,8 +235,7 @@ def render_stock_management(session):
                 "Last Price": f"${float(stock.last_price):.2f}" if stock.last_price else "N/A",
                 "Change %": f"{float(stock.change_percent):.2f}%" if stock.change_percent else "N/A",
                 "Has Options": "✓" if stock.has_options else "✗",
-                "S&P 500": "✓" if stock.is_sp500 else "✗",
-                "Sector ETF": "✓" if stock.is_sector_etf else "✗"
+                "Market Cap": f"${stock.market_cap:,.0f}" if stock.market_cap else "N/A"
             })
         
         st.dataframe(pd.DataFrame(stock_data), use_container_width=True, height=400)
