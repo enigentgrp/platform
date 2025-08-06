@@ -33,13 +33,8 @@ Preferred communication style: Simple, everyday language.
 - Implemented manual technical indicator calculations to replace ta-lib dependency issues
 - Database Admin interface with full CRUD operations and testing capabilities
 
-## AI-Powered Features
-- Implemented comprehensive AI trading assistant with interactive chat interface
-- Real-time market sentiment analysis and risk assessment capabilities
-- Contextual trading advice based on portfolio analysis and market conditions
-- Opportunity identification with confidence scoring and recommendations
-- Quick question functionality for common trading queries
-- Portfolio insights and personalized action suggestions
+## AI-Powered Features (Removed)
+- AI Assistant feature removed per user request
 
 ## Application Status (Fully Operational)
 - ✅ Authentication system working with proper credentials and role-based access control
@@ -58,8 +53,8 @@ Preferred communication style: Simple, everyday language.
 
 ## Frontend Architecture
 - **Streamlit Web Interface**: Multi-page application with role-based access control
-- **Page Structure**: Organized into dedicated modules (dashboard, trading, portfolio, AI assistant, admin, settings)
-- **AI Assistant Integration**: Interactive chat interface with contextual trading advice and market analysis
+- **Page Structure**: Organized into dedicated modules (dashboard, trading, portfolio, admin, settings)
+
 - **Real-time Updates**: Live price monitoring and trading dashboard with auto-refresh capabilities
 - **Responsive Design**: Wide layout with expandable sidebar for navigation
 
