@@ -149,58 +149,100 @@ def show_positions_page():
     
     session = get_session()
     try:
-        # Calculate current positions from transaction log
-        transactions = session.query(TransactionLog).order_by(TransactionLog.transaction_date).all()
+        # Get live positions from active broker
+        from services.broker_apis import BrokerManager
+        broker_manager = BrokerManager()
+        broker_manager.authenticate_all()
         
-        positions = {}
-        for transaction in transactions:
-            key = f"{transaction.symbol}_{transaction.asset_type}"
-            if transaction.option_type:
-                key += f"_{transaction.option_type}_{transaction.strike_price}"
+        # Show live broker positions
+        st.subheader("Live Broker Positions")
+        
+        try:
+            live_positions = broker_manager.get_positions()
+            account_info = broker_manager.get_account_info()
             
-            if key not in positions:
-                positions[key] = {
-                    'symbol': transaction.symbol,
-                    'asset_type': transaction.asset_type,
-                    'option_type': transaction.option_type,
-                    'strike_price': transaction.strike_price,
-                    'quantity': 0,
-                    'avg_price': 0,
-                    'total_cost': 0
-                }
+            # Display account summary
+            if account_info and not account_info.get('error'):
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Cash Balance", f"${account_info.get('cash', 0):,.2f}")
+                with col2:
+                    st.metric("Portfolio Value", f"${account_info.get('portfolio_value', 0):,.2f}")
+                with col3:
+                    st.metric("Buying Power", f"${account_info.get('buying_power', 0):,.2f}")
             
-            pos = positions[key]
-            if transaction.side == 'buy':
-                pos['quantity'] += transaction.quantity
-                pos['total_cost'] += transaction.price * transaction.quantity
+            if live_positions:
+                pos_data = []
+                for pos in live_positions:
+                    pos_data.append({
+                        "Symbol": pos['symbol'],
+                        "Quantity": pos['quantity'],
+                        "Market Value": f"${pos.get('market_value', 0):,.2f}",
+                        "Cost Basis": f"${pos.get('cost_basis', 0):,.2f}",
+                        "Unrealized P&L": f"${pos.get('unrealized_pnl', 0):,.2f}",
+                        "Side": pos.get('side', 'long').title()
+                    })
+                
+                df = pd.DataFrame(pos_data)
+                st.dataframe(df, use_container_width=True)
             else:
-                pos['quantity'] -= transaction.quantity
-                pos['total_cost'] -= transaction.price * transaction.quantity
+                st.info("No live positions found in your broker account.")
+                
+        except Exception as e:
+            st.error(f"Error fetching live positions: {e}")
+            st.info("Showing positions from transaction log instead...")
             
-            if pos['quantity'] > 0:
-                pos['avg_price'] = pos['total_cost'] / pos['quantity']
-        
-        # Show current positions
-        st.subheader("Current Positions")
-        active_positions = [pos for pos in positions.values() if pos['quantity'] != 0]
-        
-        if active_positions:
-            pos_data = []
-            for pos in active_positions:
-                pos_data.append({
-                    "Symbol": pos['symbol'],
-                    "Asset": pos['asset_type'].title(),
-                    "Type": pos['option_type'].title() if pos['option_type'] else "N/A",
-                    "Strike": f"${pos['strike_price']:.2f}" if pos['strike_price'] else "N/A",
-                    "Quantity": pos['quantity'],
-                    "Avg Price": f"${pos['avg_price']:.2f}",
-                    "Total Cost": f"${pos['total_cost']:.2f}"
-                })
+            # Fallback: Calculate positions from transaction log
+            transactions = session.query(TransactionLog).order_by(TransactionLog.transaction_date).all()
             
-            df = pd.DataFrame(pos_data)
-            st.dataframe(df, use_container_width=True)
-        else:
-            st.info("No current positions.")
+            positions = {}
+            for transaction in transactions:
+                key = f"{transaction.symbol}_{transaction.asset_type}"
+                if transaction.option_type:
+                    key += f"_{transaction.option_type}_{transaction.strike_price}"
+                
+                if key not in positions:
+                    positions[key] = {
+                        'symbol': transaction.symbol,
+                        'asset_type': transaction.asset_type,
+                        'option_type': transaction.option_type,
+                        'strike_price': transaction.strike_price,
+                        'quantity': 0,
+                        'avg_price': 0,
+                        'total_cost': 0
+                    }
+                
+                pos = positions[key]
+                if transaction.side == 'buy':
+                    pos['quantity'] += transaction.quantity
+                    pos['total_cost'] += transaction.price * transaction.quantity
+                else:
+                    pos['quantity'] -= transaction.quantity
+                    pos['total_cost'] -= transaction.price * transaction.quantity
+                
+                if pos['quantity'] > 0:
+                    pos['avg_price'] = pos['total_cost'] / pos['quantity']
+            
+            # Show database positions
+            active_positions = [pos for pos in positions.values() if pos['quantity'] != 0]
+            
+            if active_positions:
+                pos_data = []
+                for pos in active_positions:
+                    pos_data.append({
+                        "Symbol": pos['symbol'],
+                        "Asset": pos['asset_type'].title(),
+                        "Type": pos['option_type'].title() if pos['option_type'] else "N/A",
+                        "Strike": f"${pos['strike_price']:.2f}" if pos['strike_price'] else "N/A",
+                        "Quantity": pos['quantity'],
+                        "Avg Price": f"${pos['avg_price']:.2f}",
+                        "Total Cost": f"${pos['total_cost']:.2f}"
+                    })
+                
+                df = pd.DataFrame(pos_data)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.info("No positions found.")
         
         # Transaction log with LIFO gain/loss calculations
         st.subheader("Transaction Log (LIFO Gain/Loss)")

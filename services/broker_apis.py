@@ -397,16 +397,21 @@ class BrokerManager:
             session = get_session()
             trading_mode = session.query(EnvironmentVariable)\
                 .filter(EnvironmentVariable.key == 'TRADING_MODE').first()
-            paper_broker = session.query(EnvironmentVariable)\
-                .filter(EnvironmentVariable.key == 'PAPER_TRADING_BROKER').first()
-            live_broker = session.query(EnvironmentVariable)\
-                .filter(EnvironmentVariable.key == 'LIVE_TRADING_BROKER').first()
+            active_broker = session.query(EnvironmentVariable)\
+                .filter(EnvironmentVariable.key == 'ACTIVE_BROKER').first()
             
             mode = trading_mode.value if trading_mode else 'paper'
-            if mode == 'paper':
-                broker = paper_broker.value if paper_broker else 'alpaca_paper'
+            broker_base = active_broker.value if active_broker else 'alpaca'
+            
+            # Map broker names to internal broker keys
+            if broker_base == 'alpaca':
+                broker = 'alpaca_paper' if mode == 'paper' else 'alpaca_live'
+            elif broker_base == 'robinhood':
+                broker = 'robinhood'
+            elif broker_base == 'tradier':
+                broker = 'tradier_paper' if mode == 'paper' else 'tradier_live'
             else:
-                broker = live_broker.value if live_broker else 'robinhood'
+                broker = 'alpaca_paper'  # Default
             
             session.close()
             return broker
