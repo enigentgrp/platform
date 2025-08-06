@@ -10,127 +10,169 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS for Jesus background and pretty buttons
+# Custom CSS for Beautiful Light Jesus Theme
 st.markdown("""
 <style>
-/* Main background with Jesus image */
+/* Beautiful Light Background with Jesus - The Light of the World */
 .main {
-    background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
-                      url('https://images.unsplash.com/photo-1578662996442-48f60103fc96?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3');
+    background-image: linear-gradient(rgba(255,255,255,0.85), rgba(255,248,220,0.9)), 
+                      url('https://images.unsplash.com/photo-1501594907352-04cda38ebc29?q=80&w=2832&auto=format&fit=crop');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
+    min-height: 100vh;
 }
 
-/* Beautiful buttons */
+/* Beautiful Golden Gradient Buttons */
 .stButton > button {
-    background: linear-gradient(45deg, #ff6b35, #f7931e);
+    background: linear-gradient(45deg, #ff6b35, #ffd700, #ff8c00);
     color: white !important;
     border: none;
-    border-radius: 25px;
-    padding: 0.5rem 2rem;
+    border-radius: 30px;
+    padding: 0.75rem 2.5rem;
     font-weight: bold;
-    font-size: 1rem;
-    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
-    transition: all 0.3s ease;
+    font-size: 1.1rem;
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.5);
+    transition: all 0.4s ease;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
+    border: 2px solid rgba(255, 215, 0, 0.3);
 }
 
 .stButton > button:hover {
-    background: linear-gradient(45deg, #f7931e, #ff6b35);
-    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
-    transform: translateY(-2px);
+    background: linear-gradient(45deg, #ffd700, #ff6b35, #ffb347);
+    box-shadow: 0 12px 35px rgba(255, 215, 0, 0.7);
+    transform: translateY(-3px) scale(1.05);
+    border: 2px solid #ffd700;
 }
 
 .stButton > button:active {
-    transform: translateY(0px);
-    box-shadow: 0 2px 10px rgba(255, 107, 53, 0.8);
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.8);
 }
 
-/* Form submit buttons */
+/* Beautiful Login/Submit Buttons */
 .stFormSubmitButton > button {
-    background: linear-gradient(45deg, #28a745, #20c997) !important;
+    background: linear-gradient(45deg, #20c997, #17a2b8, #28a745) !important;
     color: white !important;
     border: none !important;
-    border-radius: 25px !important;
-    padding: 0.75rem 3rem !important;
+    border-radius: 30px !important;
+    padding: 1rem 4rem !important;
     font-weight: bold !important;
-    font-size: 1.1rem !important;
-    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4) !important;
-    transition: all 0.3s ease !important;
+    font-size: 1.2rem !important;
+    box-shadow: 0 8px 25px rgba(32, 201, 151, 0.5) !important;
+    transition: all 0.4s ease !important;
     text-transform: uppercase !important;
-    letter-spacing: 1px !important;
+    letter-spacing: 2px !important;
+    border: 2px solid rgba(32, 201, 151, 0.3) !important;
 }
 
 .stFormSubmitButton > button:hover {
-    background: linear-gradient(45deg, #20c997, #28a745) !important;
-    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6) !important;
-    transform: translateY(-2px) !important;
+    background: linear-gradient(45deg, #17a2b8, #20c997, #6f42c1) !important;
+    box-shadow: 0 12px 35px rgba(32, 201, 151, 0.7) !important;
+    transform: translateY(-3px) scale(1.05) !important;
+    border: 2px solid #20c997 !important;
 }
 
-/* Sidebar styling */
+/* Heavenly Sidebar */
 .css-1d391kg {
-    background: linear-gradient(180deg, #1f1f2e, #16213e);
-    border-right: 2px solid #ff6b35;
+    background: linear-gradient(180deg, #f8f9fa, #e9ecef, #dee2e6);
+    border-right: 3px solid #ffd700;
+    box-shadow: 2px 0 10px rgba(255, 215, 0, 0.3);
 }
 
-/* Title styling */
+/* Divine Title Styling */
 h1 {
-    color: #fafafa !important;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    color: #2c3e50 !important;
+    text-shadow: 2px 2px 8px rgba(255, 215, 0, 0.6);
     font-family: 'serif' !important;
     text-align: center;
     margin-bottom: 2rem;
+    font-weight: bold !important;
+    font-size: 2.5rem !important;
 }
 
-/* Cards and containers */
+h2, h3 {
+    color: #34495e !important;
+    text-shadow: 1px 1px 4px rgba(255, 215, 0, 0.4);
+}
+
+/* Glorious Cards and Containers */
 .stMetric {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border-radius: 15px;
-    padding: 1rem;
-    border: 1px solid rgba(255, 107, 53, 0.3);
+    background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,248,220,0.8));
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 1.5rem;
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.2);
 }
 
-/* Input fields */
+/* Beautiful Input Fields */
 .stTextInput > div > div > input {
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid #ff6b35;
-    border-radius: 10px;
-    color: white !important;
+    background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,248,220,0.8));
+    border: 2px solid #ffd700;
+    border-radius: 15px;
+    color: #2c3e50 !important;
+    font-weight: bold;
+    padding: 0.75rem;
 }
 
 .stSelectbox > div > div > select {
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid #ff6b35;
-    border-radius: 10px;
-    color: white !important;
+    background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,248,220,0.8));
+    border: 2px solid #ffd700;
+    border-radius: 15px;
+    color: #2c3e50 !important;
+    font-weight: bold;
 }
 
-/* Success/error messages */
+/* Divine Messages */
 .stSuccess {
-    background: rgba(40, 167, 69, 0.2);
-    border: 1px solid #28a745;
-    border-radius: 10px;
+    background: linear-gradient(145deg, rgba(40, 167, 69, 0.1), rgba(255,255,255,0.8));
+    border: 2px solid #28a745;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
 }
 
 .stError {
-    background: rgba(220, 53, 69, 0.2);
-    border: 1px solid #dc3545;
-    border-radius: 10px;
+    background: linear-gradient(145deg, rgba(220, 53, 69, 0.1), rgba(255,255,255,0.8));
+    border: 2px solid #dc3545;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.2);
 }
 
 .stWarning {
-    background: rgba(255, 193, 7, 0.2);
-    border: 1px solid #ffc107;
-    border-radius: 10px;
+    background: linear-gradient(145deg, rgba(255, 193, 7, 0.1), rgba(255,255,255,0.8));
+    border: 2px solid #ffc107;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2);
 }
 
 .stInfo {
-    background: rgba(255, 107, 53, 0.2);
-    border: 1px solid #ff6b35;
-    border-radius: 10px;
+    background: linear-gradient(145deg, rgba(255, 107, 53, 0.1), rgba(255,255,255,0.8));
+    border: 2px solid #ff6b35;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.2);
+}
+
+/* Beautiful Tables */
+.stDataFrame {
+    background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,248,220,0.9));
+    border-radius: 15px;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.1);
+}
+
+/* Text Color for Readability */
+.main .block-container {
+    color: #2c3e50 !important;
+}
+
+/* Radio button styling */
+.stRadio > div {
+    background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,248,220,0.8));
+    border-radius: 15px;
+    padding: 1rem;
+    border: 2px solid rgba(255, 215, 0, 0.3);
 }
 </style>
 """, unsafe_allow_html=True)
