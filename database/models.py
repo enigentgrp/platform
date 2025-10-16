@@ -85,7 +85,7 @@ class Account(Base):
     __tablename__ = 'accounts'
     
     id = Column(Integer, primary_key=True, index=True)
-    brokerage_id = Column(Integer, ForeignKey('brokerage_info.id'), nullable=False)
+    brokerage_id = Column(Integer, ForeignKey('brokerage_info.id', ondelete='RESTRICT'), nullable=False)
     account_name = Column(String(100), nullable=False)
     account_type = Column(String(50), nullable=False)  # cash, margin, ira
     total_balance = Column(Float, default=0.0)
@@ -132,7 +132,7 @@ class StockPriceHistory(Base):
     __tablename__ = 'stock_price_history'
     
     id = Column(Integer, primary_key=True, index=True)
-    stock_id = Column(Integer, ForeignKey('stocks.id'), nullable=False)
+    stock_id = Column(Integer, ForeignKey('stocks.id', ondelete='CASCADE'), nullable=False)
     symbol = Column(String(10), nullable=False, index=True)
     date = Column(DateTime(timezone=True), nullable=False, index=True)
     open_price = Column(Numeric(10, 2), nullable=False)
@@ -190,7 +190,7 @@ class PriorityCurrentPrice(Base):
     __tablename__ = 'priority_current_price'
     
     id = Column(Integer, primary_key=True, index=True)
-    stock_id = Column(Integer, ForeignKey('stocks.id'), nullable=False)
+    stock_id = Column(Integer, ForeignKey('stocks.id', ondelete='CASCADE'), nullable=False)
     symbol = Column(String(10), nullable=False, index=True)
     datetime = Column(DateTime(timezone=True), nullable=False, index=True)
     price_at_open = Column(Numeric(10, 2))  # Price when market opened
@@ -216,7 +216,7 @@ class PriorityArchivePrice(Base):
     __tablename__ = 'priority_archive_price'
     
     id = Column(Integer, primary_key=True, index=True)
-    stock_id = Column(Integer, ForeignKey('stocks.id'), nullable=False)
+    stock_id = Column(Integer, ForeignKey('stocks.id', ondelete='CASCADE'), nullable=False)
     symbol = Column(String(10), nullable=False, index=True)
     datetime = Column(DateTime(timezone=True), nullable=False, index=True)
     price_at_open = Column(Numeric(10, 2))
@@ -242,9 +242,9 @@ class Order(Base):
     __tablename__ = 'orders'
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    account_id = Column(Integer, ForeignKey('accounts.id'), nullable=False)
-    stock_id = Column(Integer, ForeignKey('stocks.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='RESTRICT'), nullable=False)
+    account_id = Column(Integer, ForeignKey('accounts.id', ondelete='RESTRICT'), nullable=False)
+    stock_id = Column(Integer, ForeignKey('stocks.id', ondelete='RESTRICT'), nullable=False)
     symbol = Column(String(10), nullable=False, index=True)
     
     # Order details
@@ -300,10 +300,10 @@ class TransactionLog(Base):
     __tablename__ = 'transaction_log'
     
     id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey('orders.id'), nullable=False)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    account_id = Column(Integer, ForeignKey('accounts.id'), nullable=False)
-    stock_id = Column(Integer, ForeignKey('stocks.id'), nullable=False)  # Added per ER diagram
+    order_id = Column(Integer, ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='RESTRICT'), nullable=False)
+    account_id = Column(Integer, ForeignKey('accounts.id', ondelete='RESTRICT'), nullable=False)
+    stock_id = Column(Integer, ForeignKey('stocks.id', ondelete='RESTRICT'), nullable=False)  # Added per ER diagram
     
     # Transaction details
     symbol = Column(String(10), nullable=False, index=True)
