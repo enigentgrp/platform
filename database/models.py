@@ -96,6 +96,8 @@ class Account(Base):
     
     # Relationships
     brokerage = relationship("BrokerageInfo", back_populates="accounts")
+    orders = relationship("Order", back_populates="account")
+    transactions = relationship("TransactionLog", back_populates="account")
 
 class Stock(Base):
     """Stock demographics - S&P 500 stocks with actively traded options + sector ETFs"""
@@ -123,6 +125,7 @@ class Stock(Base):
     priority_current_prices = relationship("PriorityCurrentPrice", back_populates="stock")
     priority_archive_prices = relationship("PriorityArchivePrice", back_populates="stock")
     orders = relationship("Order", back_populates="stock")
+    transactions = relationship("TransactionLog", back_populates="stock")
 
 class StockPriceHistory(Base):
     """Stock price history with technical indicators - populated during off hours for past 90 days"""
@@ -281,7 +284,7 @@ class Order(Base):
     
     # Relationships
     user = relationship("User")
-    account = relationship("Account")
+    account = relationship("Account", back_populates="orders")
     stock = relationship("Stock", back_populates="orders")
     transactions = relationship("TransactionLog", back_populates="order")
     
@@ -300,6 +303,7 @@ class TransactionLog(Base):
     order_id = Column(Integer, ForeignKey('orders.id'), nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     account_id = Column(Integer, ForeignKey('accounts.id'), nullable=False)
+    stock_id = Column(Integer, ForeignKey('stocks.id'), nullable=False)  # Added per ER diagram
     
     # Transaction details
     symbol = Column(String(10), nullable=False, index=True)
@@ -330,7 +334,8 @@ class TransactionLog(Base):
     # Relationships
     order = relationship("Order", back_populates="transactions")
     user = relationship("User")
-    account = relationship("Account")
+    account = relationship("Account", back_populates="transactions")
+    stock = relationship("Stock", back_populates="transactions")
     
     # Composite indexes for performance
     __table_args__ = (
