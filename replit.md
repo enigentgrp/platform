@@ -45,6 +45,124 @@ Preferred communication style: Simple, everyday language.
 - ✅ Complete database structure with priority system and technical indicators
 - ✅ Performance analysis and transaction history working correctly
 
+# Database Schema & Entity Relationship Diagram
+
+## Entity Overview (9 Core Entities)
+
+The database follows a carefully designed Entity Relationship model with 9 core entities:
+
+| Entity | Table Name | Type | Description |
+|--------|------------|------|-------------|
+| 1. Global Environment Variables | `environment_variables` | Configuration | System-wide configs like market hours, trading mode |
+| 2. Brokerage Info | `brokerage_info` | Static Reference | Broker metadata (Alpaca, Robinhood, etc.) |
+| 3. Accounts | `accounts` | User/Trading | Individual brokerage accounts per user |
+| 4. Stock Demographics | `stocks` | Reference Data | Company details, sector, market cap |
+| 5. Stock Price History | `stock_price_history` | Time-series | Historical OHLCV data with technical indicators |
+| 6. Priority Archive Price | `priority_archive_price` | Derived | Archived analytics snapshots for priority stocks |
+| 7. Priority Current Price | `priority_current_price` | Live Data | Real-time computed metrics per priority stock |
+| 8. Orders | `orders` | Trading | Buy/sell requests placed by accounts |
+| 9. Transaction Log | `transaction_log` | Audit/Record | Execution details with LIFO gain/loss |
+
+## Entity Relationship Map
+
+```
+GlobalEnv (environment_variables)
+  ↓ (used globally by all entities)
+
+BrokerageInfo (brokerage_info) ──1:N── Accounts (accounts)
+                                          │
+                                          ├──1:N── Orders (orders) ──1:N── Transactions (transaction_log)
+                                          │           │                        │
+                                          └──1:N──────┘                        │
+                                                      │                        │
+                                                      ↓                        ↓
+                                          Stock (stocks) ──────────────────────┘
+                                              │
+                                              ├──1:N── PriceHistory (stock_price_history)
+                                              ├──1:N── PriorityArchive (priority_archive_price)
+                                              └──1:1── PriorityCurrent (priority_current_price)
+```
+
+## Detailed Relationships
+
+### Primary Relationships
+
+1. **BrokerageInfo → Accounts** (1:Many)
+   - One broker can have many user accounts
+   - Foreign Key: `accounts.brokerage_id` → `brokerage_info.id`
+   - Cascade: RESTRICT (cannot delete broker if accounts exist)
+
+2. **Accounts → Orders** (1:Many)
+   - Each account places many orders
+   - Foreign Key: `orders.account_id` → `accounts.id`
+   - Cascade: RESTRICT (cannot delete account with existing orders)
+
+3. **Orders → TransactionLog** (1:Many)
+   - Each order results in one or more transactions
+   - Foreign Key: `transaction_log.order_id` → `orders.id`
+   - Cascade: CASCADE (deleting order removes its transactions)
+
+4. **Accounts → TransactionLog** (1:Many)
+   - Transactions are logged under the account
+   - Foreign Key: `transaction_log.account_id` → `accounts.id`
+   - Cascade: RESTRICT (cannot delete account with transaction history)
+
+### Stock-Related Relationships
+
+5. **Stock → StockPriceHistory** (1:Many)
+   - Each stock has many daily price records
+   - Foreign Key: `stock_price_history.stock_id` → `stocks.id`
+   - Cascade: CASCADE (deleting stock removes its history)
+
+6. **Stock → PriorityArchivePrice** (1:Many)
+   - Each stock can have archived analytics
+   - Foreign Key: `priority_archive_price.stock_id` → `stocks.id`
+   - Cascade: CASCADE (deleting stock removes archives)
+
+7. **Stock → PriorityCurrentPrice** (1:1)
+   - One current "priority" value per stock
+   - Foreign Key: `priority_current_price.stock_id` → `stocks.id`
+   - Cascade: CASCADE (deleting stock removes current price)
+
+### Trading Relationships
+
+8. **Orders → Stock** (Many:1)
+   - Each order targets one stock
+   - Foreign Key: `orders.stock_id` → `stocks.id`
+   - Cascade: RESTRICT (cannot delete stock with open orders)
+
+9. **TransactionLog → Stock** (Many:1)
+   - Each trade involves one stock
+   - Foreign Key: `transaction_log.stock_id` → `stocks.id`
+   - Cascade: RESTRICT (cannot delete stock with transaction history)
+
+10. **Users → Orders** (1:Many)
+    - Each user creates many orders
+    - Foreign Key: `orders.user_id` → `users.id`
+    - Cascade: RESTRICT
+
+11. **Users → TransactionLog** (1:Many)
+    - Each user has transaction history
+    - Foreign Key: `transaction_log.user_id` → `users.id`
+    - Cascade: RESTRICT
+
+## Database Schema Flow
+
+1. **System Level**: GlobalEnv defines system-wide configurations
+2. **Broker Level**: BrokerageInfo contains broker details and credentials
+3. **Account Level**: Accounts belong to brokers and users
+4. **Trading Level**: Orders originate from accounts targeting stocks
+5. **Execution Level**: Transactions record actual trade executions
+6. **Analytics Level**: Stock data feeds price history and priority calculations
+
+## Key Design Principles
+
+- **Data Integrity**: Foreign keys with appropriate cascade behaviors ensure referential integrity
+- **Performance**: Composite indexes on frequently queried fields (symbol + date, user + symbol)
+- **Audit Trail**: Transaction log preserves complete trading history with LIFO calculations
+- **Flexibility**: Priority system allows dynamic stock monitoring without schema changes
+- **Scalability**: Separate tables for current vs archived priority data optimizes queries
+
 # System Architecture
 
 ## Frontend Architecture
