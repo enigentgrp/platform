@@ -375,20 +375,21 @@ class TradingEngine:
             # Create transaction log
             transaction = TransactionLog(
                 order_id=order.id,
+                user_id=order.user_id,
                 account_id=order.account_id,
+                stock_id=order.stock_id,
                 symbol=order.symbol,
-                side=order.side,
+                transaction_type=order.action,
                 quantity=order.quantity,
-                price=option_price,
-                asset_type='option',
-                option_type=order.option_type,
-                strike_price=order.strike_price,
-                expiration_date=order.expiration_date
+                price_per_share=option_price,
+                total_amount=option_price * order.quantity,
+                fees=order.estimated_fees or 0.0,
+                transaction_date=datetime.utcnow()
             )
             session.add(transaction)
             session.commit()
             
-            logger.info(f"Simulated option execution: {order.side} {order.quantity} {order.option_type} {order.symbol} @ ${option_price}")
+            logger.info(f"Simulated option execution: {order.action} {order.quantity} {order.option_type} {order.symbol} @ ${option_price}")
         
         except Exception as e:
             logger.error(f"Error simulating option execution: {e}")
@@ -408,17 +409,21 @@ class TradingEngine:
             # Create transaction log
             transaction = TransactionLog(
                 order_id=order.id,
+                user_id=order.user_id,
                 account_id=order.account_id,
+                stock_id=order.stock_id,
                 symbol=order.symbol,
-                side=order.side,
+                transaction_type=order.action,
                 quantity=order.quantity,
-                price=execution_price,
-                asset_type='stock'
+                price_per_share=execution_price,
+                total_amount=execution_price * order.quantity,
+                fees=order.estimated_fees or 0.0,
+                transaction_date=datetime.utcnow()
             )
             session.add(transaction)
             session.commit()
             
-            logger.info(f"Simulated stock execution: {order.side} {order.quantity} {order.symbol} @ ${execution_price}")
+            logger.info(f"Simulated stock execution: {order.action} {order.quantity} {order.symbol} @ ${execution_price}")
         
         except Exception as e:
             logger.error(f"Error simulating stock execution: {e}")
