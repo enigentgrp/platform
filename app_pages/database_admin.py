@@ -8,8 +8,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 from database.database import get_session
 from database.models import (
-    EnvironmentVariable, BrokerageInfo, Account, Stock, StockPriceHistory,
-    PriorityCurrentPrice, PriorityArchivePrice, Order, TransactionLog, User
+    GlobalEnvVar, Account, Stock, PriceHistory,
+    PriorityStock, Order, Trade, User
 )
 from services.database_service import DatabaseService
 
@@ -20,7 +20,7 @@ def render_database_admin_page():
     st.markdown("*Comprehensive database management and testing interface*")
     
     # Authentication check
-    if 'user' not in st.session_state or not st.session_state.user or st.session_state.user.role != 'admin':
+    if 'user' not in st.session_state or not st.session_state.user or st.session_state.user_role != 'admin':
         st.error("🚫 Access denied. Admin privileges required.")
         return
     
@@ -105,17 +105,16 @@ def render_environment_variables(session):
     st.subheader("⚙️ Environment Variables")
     
     # Display current variables
-    env_vars = session.query(EnvironmentVariable).order_by(EnvironmentVariable.key).all()
+    env_vars = session.query(GlobalEnvVar).order_by(GlobalEnvVar.name).all()
     
     if env_vars:
         # Create DataFrame for display
         env_data = []
         for var in env_vars:
             env_data.append({
-                "Key": var.key,
+                "Name": var.name,
                 "Value": var.value,
-                "Type": var.variable_type,
-                "System": "✓" if var.is_system else "",
+                "Type": var.value_type,
                 "Description": (var.description[:50] + "..." if var.description and len(var.description) > 50 else (var.description or "N/A"))
             })
         
@@ -130,115 +129,85 @@ def render_environment_variables(session):
         col1, col2 = st.columns(2)
         
         with col1:
-            trading_mode = next((v.value for v in env_vars if v.key == "TRADING_MODE"), "paper")
-            active_broker = next((v.value for v in env_vars if v.key == "ACTIVE_BROKER"), "Alpaca")
+            trading_mode = next((v.value for v in env_vars if v.name == "TRADING_MODE"), "paper")
+            active_broker = next((v.value for v in env_vars if v.name == "ACTIVE_BROKER"), "alpaca")
             
             st.info(f"**Trading Mode:** {trading_mode}")
             st.info(f"**Active Broker:** {active_broker}")
         
         with col2:
-            price_interval = next((v.value for v in env_vars if v.key == "PRICE_UPDATE_INTERVAL"), "30")
-            pct_target = next((v.value for v in env_vars if v.key == "PRIORITY_PERCENTAGE_TARGET"), "2.5")
+            price_interval = next((v.value for v in env_vars if v.name == "PRICE_UPDATE_INTERVAL"), "30")
+            max_position = next((v.value for v in env_vars if v.name == "MAX_POSITION_SIZE_PERCENT"), "5")
             
             st.info(f"**Price Update Interval:** {price_interval} seconds")
-            st.info(f"**Priority Threshold:** {pct_target}%")
+            st.info(f"**Max Position Size:** {max_position}%")
 
 def render_brokerages_accounts(session):
-    """Brokerages and accounts management"""
+    """Account management"""
     
-    st.subheader("🏦 Brokerage Information")
-    
-    # Display brokerages
-    brokers = session.query(BrokerageInfo).all()
-    
-    if brokers:
-        broker_data = []
-        for broker in brokers:
-            broker_data.append({
-                "Name": broker.name,
-                "API URL": broker.api_url,
-                "Fees/Share": f"${float(broker.trading_fees_per_share):.4f}",
-                "Fees/Contract": f"${float(broker.trading_fees_per_contract):.2f}",
-                "Day Trade Limit": broker.day_trade_limit,
-                "Options": "✓" if broker.supports_options else "✗",
-                "Crypto": "✓" if broker.supports_crypto else "✗",
-                "Active": "✓" if broker.is_active else "✗"
-            })
-        
-        st.dataframe(pd.DataFrame(broker_data), use_container_width=True)
-    
-    st.divider()
-    
-    # Display accounts
     st.subheader("💳 Trading Accounts")
     
-    accounts = session.query(Account).join(BrokerageInfo).all()
+    # Display accounts
+    accounts = session.query(Account).all()
     
     if accounts:
         account_data = []
         for account in accounts:
             account_data.append({
-                "Brokerage": account.brokerage.name,
-                "Account Name": account.account_name,
-                "Type": account.account_type.title(),
-                "Total Balance": f"${account.total_balance:,.2f}",
-                "Cash Balance": f"${account.cash_balance:,.2f}",
+                "User": account.user.username if account.user else "N/A",
+                "Broker Platform": account.broker_platform or "N/A",
+                "Account Number": account.broker_account_id or "N/A",
                 "Active": "✓" if account.is_active else "✗"
             })
         
         st.dataframe(pd.DataFrame(account_data), use_container_width=True)
+    else:
+        st.info("No trading accounts configured yet.")
 
 def render_stock_management(session):
     """Stock management interface"""
     
     st.subheader("📈 Stock Management")
     
-    # Stock summary by priority
+    # Stock summary
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        normal_stocks = session.query(Stock).filter(Stock.priority == 0).count()
-        st.metric("S&P 500 Stocks (Priority 0)", normal_stocks)
+        total_stocks = session.query(Stock).count()
+        st.metric("Total Stocks", total_stocks)
     
     with col2:
-        priority_stocks = session.query(Stock).filter(Stock.priority == 1).count()
-        st.metric("Priority Stocks (Priority 1)", priority_stocks)
+        priority_flagged = session.query(PriorityStock).count()
+        st.metric("Priority Flagged", priority_flagged)
     
     with col3:
-        etf_stocks = session.query(Stock).filter(Stock.priority == 9).count()
-        st.metric("Sector ETFs (Priority 9)", etf_stocks)
+        active_stocks = session.query(Stock).filter(Stock.is_active == True).count()
+        st.metric("Active Stocks", active_stocks)
     
     st.divider()
     
-    st.info("📋 **Stock Universe**: S&P 500 companies with actively traded options + Sector ETFs")
+    st.info("📋 **Stock Universe**: Stocks with market segment categorization")
     
-    # Display stocks by category
-    category = st.selectbox("Select Category", ["All Stocks", "Priority Stocks (1)", "Sector ETFs (9)", "Normal S&P 500 (0)"])
-    
-    if category == "All Stocks":
-        stocks = session.query(Stock).order_by(Stock.priority.desc(), Stock.symbol).all()
-    elif category == "Priority Stocks (1)":
-        stocks = session.query(Stock).filter(Stock.priority == 1).order_by(Stock.symbol).all()
-    elif category == "Sector ETFs (9)":
-        stocks = session.query(Stock).filter(Stock.priority == 9).order_by(Stock.symbol).all()
-    else:  # Normal S&P 500 (0)
-        stocks = session.query(Stock).filter(Stock.priority == 0).order_by(Stock.symbol).all()
+    # Display all stocks
+    stocks = session.query(Stock).order_by(Stock.symbol).all()
     
     if stocks:
         stock_data = []
         for stock in stocks:
+            # Check if stock is priority flagged
+            priority_record = session.query(PriorityStock).filter(PriorityStock.stock_id == stock.id).first()
+            
             stock_data.append({
                 "Symbol": stock.symbol,
                 "Name": stock.name,
-                "Sector": stock.sector,
-                "Priority": stock.priority,
-                "Last Price": f"${float(stock.last_price):.2f}" if stock.last_price else "N/A",
-                "Change %": f"{float(stock.change_percent):.2f}%" if stock.change_percent else "N/A",
-                "Has Options": "✓" if stock.has_options else "✗",
-                "Market Cap": f"${stock.market_cap:,.0f}" if stock.market_cap else "N/A"
+                "Market Segment": stock.market_segment.name if stock.market_segment else "N/A",
+                "Priority Score": f"{priority_record.score:.2f}" if priority_record else "0.00",
+                "Active": "✓" if stock.is_active else "✗"
             })
         
         st.dataframe(pd.DataFrame(stock_data), use_container_width=True, height=400)
+    else:
+        st.info("No stocks found in database.")
 
 def render_priority_system(session, db_service):
     """Priority system management and testing"""
@@ -310,29 +279,29 @@ def render_priority_system(session, db_service):
             except Exception as e:
                 st.error(f"❌ Error evaluating opportunities: {e}")
     
-    # Recent priority price activity
+    # Recent priority stocks
     st.divider()
-    st.subheader("📈 Recent Priority Price Activity")
+    st.subheader("📈 Priority Stock Rankings")
     
-    recent_prices = session.query(PriorityCurrentPrice).order_by(
-        PriorityCurrentPrice.datetime.desc()
+    priority_stocks = session.query(PriorityStock).order_by(
+        PriorityStock.score.desc()
     ).limit(20).all()
     
-    if recent_prices:
-        price_data = []
-        for price in recent_prices:
-            price_data.append({
-                "Symbol": price.symbol,
-                "DateTime": price.datetime.strftime("%Y-%m-%d %H:%M:%S"),
-                "Current Price": f"${float(price.current_price):.2f}" if price.current_price is not None else "N/A",
-                "Change from Previous": f"{float(price.percent_change_from_previous):.2f}%" if price.percent_change_from_previous is not None else "N/A",
-                "Change from Open": f"{float(price.percent_change_from_open):.2f}%" if price.percent_change_from_open is not None else "N/A",
-                "Volume": f"{price.volume:,}" if price.volume else "N/A"
+    if priority_stocks:
+        priority_data = []
+        for ps in priority_stocks:
+            stock = ps.stock
+            priority_data.append({
+                "Symbol": stock.symbol if stock else "N/A",
+                "Name": stock.name if stock else "N/A",
+                "Score": f"{ps.score:.2f}" if ps.score else "0",
+                "Flagged At": ps.flagged_at.strftime("%Y-%m-%d %H:%M:%S") if ps.flagged_at else "N/A",
+                "Reason": ps.reason[:50] if ps.reason else "N/A"
             })
         
-        st.dataframe(pd.DataFrame(price_data), use_container_width=True, height=300)
+        st.dataframe(pd.DataFrame(priority_data), use_container_width=True, height=300)
     else:
-        st.info("No recent priority price data available.")
+        st.info("No priority stocks flagged yet.")
 
 if __name__ == "__main__":
     render_database_admin_page()

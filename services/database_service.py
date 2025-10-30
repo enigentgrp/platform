@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from database.models import (
-    Stock, EnvironmentVariable, PriorityCurrentPrice, PriorityArchivePrice,
-    StockPriceHistory, Order, TransactionLog
+    Stock, GlobalEnvVar, PriorityStock,
+    PriceHistory, Order, Trade
 )
 import numpy as np
 from typing import List, Optional
@@ -21,22 +21,22 @@ class DatabaseService:
     
     def get_environment_variable(self, key: str, default=None):
         """Get environment variable value with type conversion"""
-        env_var = self.session.query(EnvironmentVariable).filter(
-            EnvironmentVariable.key == key
+        env_var = self.session.query(GlobalEnvVar).filter(
+            GlobalEnvVar.name == key
         ).first()
         
         if not env_var:
             return default
             
         value = env_var.value
-        var_type = env_var.variable_type
+        var_type = env_var.value_type
         
         try:
-            if var_type == 'integer':
+            if var_type == 'int':
                 return int(value)
             elif var_type == 'float':
                 return float(value)
-            elif var_type == 'boolean':
+            elif var_type in ('bool', 'boolean'):
                 return value.lower() in ('true', '1', 'yes', 'on')
             else:
                 return value
@@ -253,12 +253,13 @@ class DatabaseService:
         Returns (cost_basis, realized_gain_loss)
         """
         # Get all buy transactions for this symbol, ordered by date desc (LIFO)
-        buy_transactions = self.session.query(TransactionLog).filter(
+        # Note: Trade table doesn't have transaction_type field, need to use order side
+        buy_transactions = self.session.query(Trade).join(Order).filter(
             and_(
-                TransactionLog.symbol == symbol,
-                TransactionLog.transaction_type == 'buy'
+                Order.stock.has(symbol=symbol),
+                Order.side == 'buy'
             )
-        ).order_by(TransactionLog.transaction_date.desc()).all()
+        ).order_by(Trade.executed_at.desc()).all()
         
         remaining_quantity = quantity
         total_cost_basis = 0.0
@@ -267,10 +268,10 @@ class DatabaseService:
             if remaining_quantity <= 0:
                 break
                 
-            available_shares = transaction.quantity
+            available_shares = transaction.executed_qty
             shares_to_use = min(remaining_quantity, available_shares)
             
-            cost_basis_portion = shares_to_use * float(transaction.price_per_share)
+            cost_basis_portion = shares_to_use * float(transaction.executed_price)
             total_cost_basis += cost_basis_portion
             
             remaining_quantity -= shares_to_use
@@ -280,15 +281,15 @@ class DatabaseService:
     def get_database_stats(self):
         """Get comprehensive database statistics"""
         stats = {
-            'environment_variables': self.session.query(EnvironmentVariable).count(),
+            'environment_variables': self.session.query(GlobalEnvVar).count(),
             'stocks_total': self.session.query(Stock).count(),
-            'stocks_priority_1': self.session.query(Stock).filter(Stock.priority == 1).count(),
-            'stocks_sector_etf': self.session.query(Stock).filter(Stock.priority == 9).count(),
-            'priority_current_prices': self.session.query(PriorityCurrentPrice).count(),
-            'priority_archive_prices': self.session.query(PriorityArchivePrice).count(),
+            'stocks_priority_1': self.session.query(PriorityStock).count(),
+            'stocks_sector_etf': 0,  # No longer tracked this way in new schema
+            'priority_current_prices': self.session.query(PriorityStock).count(),
+            'priority_archive_prices': 0,  # No longer exists in new schema
             'orders_total': self.session.query(Order).count(),
             'orders_pending': self.session.query(Order).filter(Order.status == 'pending').count(),
-            'transactions_total': self.session.query(TransactionLog).count()
+            'transactions_total': self.session.query(Trade).count()
         }
         
         return stats
