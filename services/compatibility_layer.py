@@ -229,8 +229,9 @@ def get_all_trades(session: Session, limit: int = 100) -> List[LegacyTradeView]:
 
 
 def get_user_by_username(session: Session, username: str) -> Optional[User]:
-    """Get user by username"""
-    return session.query(User).filter(User.username == username).first()
+    """Get user by username with eager-loaded role"""
+    from sqlalchemy.orm import joinedload
+    return session.query(User).options(joinedload(User.role)).filter(User.username == username).first()
 
 
 def verify_user_password(user: User, password: str) -> bool:

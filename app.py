@@ -189,6 +189,8 @@ def initialize_session_state():
         st.session_state.authenticated = False
     if 'user' not in st.session_state:
         st.session_state.user = None
+    if 'user_role' not in st.session_state:
+        st.session_state.user_role = None
     if 'engine_status' not in st.session_state:
         st.session_state.engine_status = 'Stopped'
 
@@ -198,8 +200,10 @@ def authenticate_user(username, password):
     try:
         user = get_user_by_username(session, username)
         if user and verify_user_password(user, password):
-            return user
-        return None
+            # Get role name before session closes
+            role_name = get_user_role(user)
+            return user, role_name
+        return None, None
     finally:
         session.close()
 
@@ -213,10 +217,11 @@ def show_login_page():
         submit = st.form_submit_button("Login")
         
         if submit:
-            user = authenticate_user(username, password)
+            user, role_name = authenticate_user(username, password)
             if user:
                 st.session_state.authenticated = True
                 st.session_state.user = user
+                st.session_state.user_role = role_name
                 st.success("Login successful!")
                 st.rerun()
             else:
@@ -508,8 +513,9 @@ def show_positions_page():
 def show_settings_page():
     """Environment variables configuration per requirements"""
     user = st.session_state.user
+    user_role = st.session_state.user_role
     
-    if user.role == 'admin':
+    if user_role == 'admin':
         st.title("⚙️ Settings - Environment Variables")
     else:
         st.title("⚙️ Trading Settings")
@@ -549,7 +555,7 @@ def show_settings_page():
             )
         
         # Advanced settings - admin only
-        if user.role == 'admin':
+        if user_role == 'admin':
             with col2:
                 price_interval = st.number_input(
                     "Price Update Interval (seconds)",
@@ -578,7 +584,7 @@ def show_settings_page():
         
         if st.button("Save Settings"):
             # Update environment variables based on user role
-            if user.role == 'admin':
+            if user_role == 'admin':
                 # Admin can change all settings
                 updates = [
                     ('ACTIVE_BROKER', active_broker),
@@ -633,7 +639,8 @@ def sidebar_navigation():
     
     if st.session_state.authenticated:
         user = st.session_state.user
-        st.sidebar.write(f"👤 {user.username} ({user.role})")
+        user_role = st.session_state.user_role
+        st.sidebar.write(f"👤 {user.username} ({user_role})")
         
         # Show engine status
         engine_status = st.session_state.get('engine_status', 'Stopped')
@@ -650,11 +657,11 @@ def sidebar_navigation():
         }
         
         # Trader and Admin pages
-        if user.role in ['admin', 'trader']:
+        if user_role in ['admin', 'trader']:
             pages["Settings"] = "⚙️"
             
         # Admin-only pages  
-        if user.role == 'admin':
+        if user_role == 'admin':
             pages["Database"] = "🗄️"
         
         selected_page = st.sidebar.radio(
@@ -667,6 +674,7 @@ def sidebar_navigation():
         if st.sidebar.button("🚪 Logout"):
             st.session_state.authenticated = False
             st.session_state.user = None
+            st.session_state.user_role = None
             st.session_state.trading_engine = None
             st.rerun()
         

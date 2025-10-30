@@ -391,14 +391,14 @@ class BrokerManager:
     def _get_broker_from_env(self) -> str:
         """Get active broker from environment variables or database"""
         from database.database import get_session
-        from database.models import EnvironmentVariable
+        from database.models import GlobalEnvVar
         
         try:
             session = get_session()
-            trading_mode = session.query(EnvironmentVariable)\
-                .filter(EnvironmentVariable.key == 'TRADING_MODE').first()
-            active_broker = session.query(EnvironmentVariable)\
-                .filter(EnvironmentVariable.key == 'ACTIVE_BROKER').first()
+            trading_mode = session.query(GlobalEnvVar)\
+                .filter(GlobalEnvVar.name == 'TRADING_MODE').first()
+            active_broker = session.query(GlobalEnvVar)\
+                .filter(GlobalEnvVar.name == 'ACTIVE_BROKER').first()
             
             mode = trading_mode.value if trading_mode else 'paper'
             broker_base = active_broker.value if active_broker else 'alpaca'
