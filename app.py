@@ -1,7 +1,13 @@
 import streamlit as st
 import pandas as pd
 from database.database import get_session
-from database.models import User, EnvironmentVariable, Order, TransactionLog, Stock
+from database.models import User
+from services.compatibility_layer import (
+    get_env_var, set_env_var, get_all_env_vars,
+    get_priority_stocks, get_all_stocks_with_prices,
+    get_all_orders, get_all_trades, get_recent_priority_updates,
+    get_user_by_username, verify_user_password, get_user_role
+)
 
 # Page configuration
 st.set_page_config(
@@ -190,8 +196,8 @@ def authenticate_user(username, password):
     """Authenticate user against database"""
     session = get_session()
     try:
-        user = session.query(User).filter(User.username == username).first()
-        if user and user.check_password(password):
+        user = get_user_by_username(session, username)
+        if user and verify_user_password(user, password):
             return user
         return None
     finally:
@@ -266,9 +272,7 @@ def show_trading_interface():
         # Trading mode from environment variables
         session = get_session()
         try:
-            mode_var = session.query(EnvironmentVariable).filter(
-                EnvironmentVariable.key == 'TRADING_MODE'
-            ).first()
+            mode_var = get_env_var(session, 'TRADING_MODE')
             current_mode = mode_var.value if mode_var else 'paper'
             st.info(f"Mode: {current_mode.upper()}")
         finally:
@@ -284,26 +288,18 @@ def show_trading_interface():
         # Show recent activity logs
         session = get_session()
         try:
-            from database.models import PriorityCurrentPrice
-            
-            # Get most recent price updates (last 5 minutes)
-            from datetime import datetime, timedelta
-            five_min_ago = datetime.utcnow() - timedelta(minutes=5)
-            
-            recent_updates = session.query(PriorityCurrentPrice)\
-                .filter(PriorityCurrentPrice.datetime >= five_min_ago)\
-                .order_by(PriorityCurrentPrice.datetime.desc())\
-                .limit(10).all()
+            # Get most recent priority updates (last 5 minutes)
+            recent_updates = get_recent_priority_updates(session, minutes=5, limit=10)
             
             if recent_updates:
                 activity_data = []
                 for update in recent_updates:
                     activity_data.append({
-                        "Time": update.datetime.strftime("%H:%M:%S"),
-                        "Symbol": update.symbol,
-                        "Price": f"${update.current_price:.2f}",
-                        "Change": f"{update.percent_change_from_previous:+.2f}%",
-                        "Volume": f"{update.volume:,}" if update.volume else "N/A"
+                        "Time": update["datetime"].strftime("%H:%M:%S"),
+                        "Symbol": update["symbol"],
+                        "Price": f"${update['current_price']:.2f}",
+                        "Change": f"{update['percent_change_from_previous']:+.2f}%",
+                        "Volume": f"{update['volume']:,}" if update['volume'] else "N/A"
                     })
                 
                 activity_df = pd.DataFrame(activity_data)
@@ -331,7 +327,7 @@ def show_trading_interface():
     
     session = get_session()
     try:
-        priority_stocks = session.query(Stock).filter(Stock.priority > 0).order_by(Stock.priority.desc()).all()
+        priority_stocks = get_priority_stocks(session)
         
         if priority_stocks:
             stock_data = []
@@ -362,7 +358,7 @@ def show_orders_page():
     
     session = get_session()
     try:
-        orders = session.query(Order).order_by(Order.submitted_at.desc()).all()
+        orders = get_all_orders(session, limit=200)
         
         if orders:
             order_data = []
@@ -440,33 +436,28 @@ def show_positions_page():
             st.error(f"Error fetching live positions: {e}")
             st.info("Showing positions from transaction log instead...")
             
-            # Fallback: Calculate positions from transaction log
-            transactions = session.query(TransactionLog).order_by(TransactionLog.transaction_date).all()
+            # Fallback: Calculate positions from trade history
+            trades = get_all_trades(session, limit=500)
             
             positions = {}
-            for transaction in transactions:
-                key = f"{transaction.symbol}_{transaction.asset_type}"
-                if transaction.option_type:
-                    key += f"_{transaction.option_type}_{transaction.strike_price}"
+            for trade in trades:
+                key = f"{trade.symbol}"
                 
                 if key not in positions:
                     positions[key] = {
-                        'symbol': transaction.symbol,
-                        'asset_type': transaction.asset_type,
-                        'option_type': transaction.option_type,
-                        'strike_price': transaction.strike_price,
+                        'symbol': trade.symbol,
                         'quantity': 0,
                         'avg_price': 0,
                         'total_cost': 0
                     }
                 
                 pos = positions[key]
-                if transaction.side == 'buy':
-                    pos['quantity'] += transaction.quantity
-                    pos['total_cost'] += transaction.price * transaction.quantity
+                if trade.side == 'BUY':
+                    pos['quantity'] += trade.quantity
+                    pos['total_cost'] += trade.executed_price * trade.quantity
                 else:
-                    pos['quantity'] -= transaction.quantity
-                    pos['total_cost'] -= transaction.price * transaction.quantity
+                    pos['quantity'] -= trade.quantity
+                    pos['total_cost'] -= trade.executed_price * trade.quantity
                 
                 if pos['quantity'] > 0:
                     pos['avg_price'] = pos['total_cost'] / pos['quantity']
@@ -479,9 +470,6 @@ def show_positions_page():
                 for pos in active_positions:
                     pos_data.append({
                         "Symbol": pos['symbol'],
-                        "Asset": pos['asset_type'].title(),
-                        "Type": pos['option_type'].title() if pos['option_type'] else "N/A",
-                        "Strike": f"${pos['strike_price']:.2f}" if pos['strike_price'] else "N/A",
                         "Quantity": pos['quantity'],
                         "Avg Price": f"${pos['avg_price']:.2f}",
                         "Total Cost": f"${pos['total_cost']:.2f}"
@@ -493,9 +481,9 @@ def show_positions_page():
                 st.info("No positions found.")
         
         # Transaction log with LIFO gain/loss calculations
-        st.subheader("Transaction Log (LIFO Gain/Loss)")
+        st.subheader("Transaction Log")
         
-        recent_transactions = session.query(TransactionLog).order_by(TransactionLog.transaction_date.desc()).limit(50).all()
+        recent_transactions = get_all_trades(session, limit=50)
         
         if recent_transactions:
             trans_data = []
@@ -504,11 +492,9 @@ def show_positions_page():
                     "Date": transaction.transaction_date.strftime("%Y-%m-%d %H:%M"),
                     "Symbol": transaction.symbol,
                     "Side": transaction.side.title(),
-                    "Asset": transaction.asset_type.title(),
                     "Quantity": transaction.quantity,
-                    "Price": f"${transaction.price:.2f}",
-                    "Total": f"${transaction.price * transaction.quantity:.2f}",
-                    "LIFO P&L": f"${transaction.gain_loss:.2f}" if transaction.gain_loss else "N/A"
+                    "Price": f"${transaction.executed_price:.2f}",
+                    "Total": f"${transaction.executed_price * transaction.quantity:.2f}"
                 })
             
             df = pd.DataFrame(trans_data)
@@ -531,7 +517,7 @@ def show_settings_page():
     session = get_session()
     try:
         # Get current environment variables
-        env_vars = {var.key: var.value for var in session.query(EnvironmentVariable).all()}
+        env_vars = {var.key: var.value for var in get_all_env_vars(session)}
         
         st.subheader("Trading Configuration")
         
@@ -609,14 +595,7 @@ def show_settings_page():
                 ]
             
             for key, value in updates:
-                env_var = session.query(EnvironmentVariable).filter(EnvironmentVariable.key == key).first()
-                if env_var:
-                    env_var.value = value
-                else:
-                    env_var = EnvironmentVariable(key=key, value=value)
-                    session.add(env_var)
-            
-            session.commit()
+                set_env_var(session, key, value)
             
             # Immediately update the broker manager
             try:
