@@ -51,9 +51,8 @@ def get_session():
 def init_database():
     """Initialize database and create tables"""
     from database.models import (
-        User, EnvironmentVariable, BrokerageInfo, Account, 
-        Stock, StockPriceHistory, PriorityCurrentPrice, 
-        PriorityArchivePrice, Order, TransactionLog
+        User, Role, Permission, RolePermission, GlobalEnvVar,
+        MarketSegment, Stock, Account
     )
     
     # Create all tables
@@ -62,97 +61,110 @@ def init_database():
     # Initialize default data
     session = get_session()
     try:
+        # Create default roles
+        roles_data = [
+            ('admin', 'Administrator with full access'),
+            ('trader', 'Trader with trading permissions'),
+            ('viewer', 'View-only access')
+        ]
+        
+        roles = {}
+        for role_name, role_desc in roles_data:
+            existing_role = session.query(Role).filter(Role.name == role_name).first()
+            if not existing_role:
+                role = Role(name=role_name)
+                session.add(role)
+                session.flush()
+                roles[role_name] = role
+            else:
+                roles[role_name] = existing_role
+        
+        session.commit()
+        
         # Create default admin user if not exists
         admin_user = session.query(User).filter(User.username == 'admin').first()
         if not admin_user:
             from utils.auth import hash_password
+            admin_role = session.query(Role).filter(Role.name == 'admin').first()
             admin_user = User(
                 username='admin',
-                email='admin@trading.com',
+                email='admin@foundation.com',
                 password_hash=hash_password('admin123'),
-                role='admin',
-                is_active=True
+                role_id=admin_role.id if admin_role else None
             )
             session.add(admin_user)
         
         # Create default environment variables
-        default_env_vars = {
-            'TRADING_MODE': 'paper',  # paper or live
-            'ACTIVE_BROKER': 'alpaca',
-            'PRICE_UPDATE_INTERVAL': '30',  # seconds
-            'ARCHIVE_RETENTION_DAYS': '30',
-            'MAX_POSITION_SIZE_PERCENT': '5',
-            'RISK_MANAGEMENT_ENABLED': 'true',
-            'TECHNICAL_ANALYSIS_PERIODS': '14'
-        }
+        default_env_vars = [
+            ('TRADING_MODE', 'paper', 'str', 'Trading mode: paper or live'),
+            ('PRICE_UPDATE_INTERVAL', '30', 'int', 'Seconds between price updates'),
+            ('MAX_POSITION_SIZE_PERCENT', '5', 'pct', 'Maximum position size as percentage'),
+            ('RISK_MANAGEMENT_ENABLED', 'true', 'bool', 'Enable risk management'),
+            ('TECHNICAL_ANALYSIS_PERIODS', '14', 'int', 'Periods for technical analysis'),
+        ]
         
-        for key, value in default_env_vars.items():
-            existing = session.query(EnvironmentVariable).filter(
-                EnvironmentVariable.key == key
-            ).first()
+        for name, value, value_type, description in default_env_vars:
+            existing = session.query(GlobalEnvVar).filter(GlobalEnvVar.name == name).first()
             if not existing:
-                env_var = EnvironmentVariable(
-                    key=key,
+                env_var = GlobalEnvVar(
+                    name=name,
                     value=value,
-                    description=f'Default {key.lower().replace("_", " ")}'
+                    value_type=value_type,
+                    description=description
                 )
                 session.add(env_var)
         
-        # Create default brokerage info
-        brokers = [
-            {
-                'name': 'Alpaca',
-                'api_url': 'https://paper-api.alpaca.markets',
-                'trading_fees_per_share': 0.0,
-                'trading_fees_per_contract': 0.65,
-                'day_trade_limit': 3,
-                'supports_options': True,
-                'supports_crypto': True,
-                'is_active': True
-            },
-            {
-                'name': 'Robinhood',
-                'api_url': 'https://robinhood.com/api',
-                'trading_fees_per_share': 0.0,
-                'trading_fees_per_contract': 0.0,
-                'day_trade_limit': 3,
-                'supports_options': True,
-                'supports_crypto': True,
-                'is_active': False
-            }
+        # Create default market segments
+        segments_data = [
+            ('sp500', 'S&P 500'),
+            ('technology', 'Technology Sector'),
+            ('healthcare', 'Healthcare Sector'),
+            ('financials', 'Financial Sector'),
         ]
         
-        for broker_data in brokers:
-            existing = session.query(BrokerageInfo).filter(
-                BrokerageInfo.name == broker_data['name']
-            ).first()
+        segments = {}
+        for slug, name in segments_data:
+            existing = session.query(MarketSegment).filter(MarketSegment.slug == slug).first()
             if not existing:
-                broker = BrokerageInfo(**broker_data)
-                session.add(broker)
+                segment = MarketSegment(slug=slug, name=name)
+                session.add(segment)
+                session.flush()
+                segments[slug] = segment
+            else:
+                segments[slug] = existing
         
-        # Initialize S&P 500 stocks with sample data including prices
+        # Initialize sample stocks
         sample_stocks = [
-            {'symbol': 'AAPL', 'name': 'Apple Inc.', 'sector': 'Technology', 'industry': 'Consumer Electronics', 'market_cap': 3000000000000, 'last_price': 185.50, 'change_percent': 1.2},
-            {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'sector': 'Technology', 'industry': 'Software', 'market_cap': 2800000000000, 'last_price': 420.25, 'change_percent': 0.8},
-            {'symbol': 'GOOGL', 'name': 'Alphabet Inc.', 'sector': 'Communication Services', 'industry': 'Internet Services', 'market_cap': 1800000000000, 'last_price': 155.75, 'change_percent': -0.5},
-            {'symbol': 'AMZN', 'name': 'Amazon.com Inc.', 'sector': 'Consumer Discretionary', 'industry': 'E-commerce', 'market_cap': 1600000000000, 'last_price': 165.80, 'change_percent': 2.1},
-            {'symbol': 'TSLA', 'name': 'Tesla Inc.', 'sector': 'Consumer Discretionary', 'industry': 'Electric Vehicles', 'market_cap': 800000000000, 'last_price': 245.30, 'change_percent': 3.5},
-            {'symbol': 'META', 'name': 'Meta Platforms Inc.', 'sector': 'Communication Services', 'industry': 'Social Media', 'market_cap': 900000000000, 'last_price': 485.60, 'change_percent': 1.8},
-            {'symbol': 'NVDA', 'name': 'NVIDIA Corporation', 'sector': 'Technology', 'industry': 'Semiconductors', 'market_cap': 2200000000000, 'last_price': 875.40, 'change_percent': 4.2},
-            {'symbol': 'JPM', 'name': 'JPMorgan Chase & Co.', 'sector': 'Financials', 'industry': 'Banking', 'market_cap': 500000000000, 'last_price': 195.75, 'change_percent': 0.3},
-            {'symbol': 'JNJ', 'name': 'Johnson & Johnson', 'sector': 'Healthcare', 'industry': 'Pharmaceuticals', 'market_cap': 450000000000, 'last_price': 155.20, 'change_percent': -0.2},
-            {'symbol': 'V', 'name': 'Visa Inc.', 'sector': 'Financials', 'industry': 'Payment Processing', 'market_cap': 520000000000, 'last_price': 295.85, 'change_percent': 1.1}
+            {'symbol': 'AAPL', 'name': 'Apple Inc.', 'shares_outstanding': 15000000000, 'segment': 'technology'},
+            {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'shares_outstanding': 7500000000, 'segment': 'technology'},
+            {'symbol': 'GOOGL', 'name': 'Alphabet Inc.', 'shares_outstanding': 6000000000, 'segment': 'technology'},
+            {'symbol': 'AMZN', 'name': 'Amazon.com Inc.', 'shares_outstanding': 10000000000, 'segment': 'technology'},
+            {'symbol': 'TSLA', 'name': 'Tesla Inc.', 'shares_outstanding': 3000000000, 'segment': 'technology'},
+            {'symbol': 'META', 'name': 'Meta Platforms Inc.', 'shares_outstanding': 2500000000, 'segment': 'technology'},
+            {'symbol': 'NVDA', 'name': 'NVIDIA Corporation', 'shares_outstanding': 2500000000, 'segment': 'technology'},
+            {'symbol': 'JPM', 'name': 'JPMorgan Chase & Co.', 'shares_outstanding': 3000000000, 'segment': 'financials'},
+            {'symbol': 'JNJ', 'name': 'Johnson & Johnson', 'shares_outstanding': 2500000000, 'segment': 'healthcare'},
+            {'symbol': 'V', 'name': 'Visa Inc.', 'shares_outstanding': 2000000000, 'segment': 'financials'}
         ]
         
         for stock_data in sample_stocks:
             existing = session.query(Stock).filter(Stock.symbol == stock_data['symbol']).first()
             if not existing:
-                stock = Stock(**stock_data, priority=1, has_options=True)
+                segment_slug = stock_data.pop('segment')
+                segment = segments.get(segment_slug)
+                stock = Stock(
+                    **stock_data,
+                    market_segment_id=segment.id if segment else None,
+                    is_active=True
+                )
                 session.add(stock)
         
         session.commit()
+        print("✅ Database initialized successfully with new schema")
+        
     except Exception as e:
         session.rollback()
+        print(f"❌ Error initializing database: {e}")
         raise e
     finally:
         session.close()

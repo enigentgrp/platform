@@ -4,12 +4,16 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi>=0.120.2",
     "numpy>=2.3.2",
     "pandas>=2.3.1",
     "plotly>=6.2.0",
     "psycopg2-binary>=2.9.10",
+    "pyjwt>=2.10.1",
+    "python-multipart>=0.0.20",
     "requests>=2.32.4",
     "sqlalchemy>=2.0.42",
     "streamlit>=1.47.1",
+    "uvicorn>=0.38.0",
     "yfinance>=0.2.65",
 ]
