@@ -1,225 +1,261 @@
 # Overview
 
-This is Foundation - an algorithmic trading platform for stocks and stock options built with Streamlit for the web interface and SQLAlchemy for database management. The platform supports multiple users with role-based permissions, integrates with multiple brokers (RobinHood and Alpaca), and provides automated trading capabilities based on technical indicators. The system focuses on S&P 500 stocks with actively traded options and uses momentum-based trading strategies for both call and put options.
+This is Foundation - an algorithmic trading platform featuring a **FastAPI REST backend** and **Streamlit frontend**. The platform has been migrated from a simpler database structure to a sophisticated architecture with **RBAC (Role-Based Access Control)**, **market segments** for stock categorization, and **stochastic indicators** for advanced technical analysis.
 
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
 
-# Recent Changes (August 2025)
+# Recent Changes (October 2025)
 
-## Foundation Platform Updates (Latest - August 2025)
-- **Rebranded to Foundation**: Changed platform name with Jesus background and beautiful button styling
-- **Enhanced Visual Design**: Custom CSS with gradient buttons, holy theme, and spiritual aesthetics
-- **Completely Streamlined Interface**: Removed all extra features not in original requirements
-- **Core Navigation Only**: Trading, Orders, Positions (admin gets Settings and Database access)
-- **Simplified Authentication**: Basic login with role-based access (admin/trader/viewer roles preserved)
-- **Focus on Requirements**: Strictly following original document specifications
-- **Trader Broker Access**: Traders can now switch broker platforms in Settings page
-- **Core Functionality Preserved**: All algorithmic trading logic, database tables, broker APIs remain intact
-- **Clean Code**: Streamlined app.py with only essential functions matching requirements
+## Major Architecture Migration (Latest - October 30, 2025)
 
-## Essential Features Maintained
-- **Trading Engine**: Start/stop controls for algorithmic trading system
-- **Priority Stocks**: Display stocks with priority > 0 as specified in requirements  
-- **Orders Table**: Complete order history with asset type, quantities, bid/ask, timestamps
-- **Transaction Log**: LIFO gain/loss calculations as specified
-- **Environment Variables**: Core trading configuration (paper/live mode, intervals, position sizing)
-- **Database Access**: Admin users can access database management interface
-- **Multi-broker Support**: RobinHood and Alpaca API integration preserved
-- **Broker Switching**: Traders can switch broker platforms in Settings (admins get full config access)
+### Database Schema Replacement
+- **Migrated from 9-entity model to sophisticated RBAC structure**
+- **New Core Entities**: Roles, Permissions, RolePermission, MarketSegment, PriceHistory, StochasticHistory
+- **Replaced Models**: 
+  - `EnvironmentVariable` → `GlobalEnvVar` (with market segment and stock-level overrides)
+  - `StockPriceHistory` → `PriceHistory`
+  - `PriorityCurrentPrice` → `PriorityStock` (with scoring system)
+  - `TransactionLog` → `Trade`
+  - Removed `BrokerageInfo` (integrated into external broker APIs)
+- **Created Compatibility Layer**: `services/compatibility_layer.py` bridges old Streamlit UI with new schema
+- **FastAPI Backend**: Running on port 8000 with JWT authentication and comprehensive API endpoints
 
-## AI-Powered Features (Removed)
-- AI Assistant feature removed per user request
+### Key Features Added
+- **RBAC System**: Fine-grained permission control with role-permission mapping
+- **Market Segments**: Stocks categorized by market (sp500, technology, healthcare, financials)
+- **Stochastic Indicators**: Advanced technical analysis with SMA, SD, RSI, MACD, K, D calculations
+- **Three-Level Environment Variables**: Global, market segment-specific, and stock-specific configuration
+- **FastAPI REST API**: Complete backend API with authentication, orders, positions, and market data endpoints
+- **Compatibility Layer**: Allows gradual migration of Streamlit pages to new schema
 
-## Application Status (Fully Operational)
-- ✅ Authentication system working with proper credentials and role-based access control
-- ✅ Three-tier user system: Admin (full access), Trader (trading enabled), Viewer (read-only)
-- ✅ All major pages functional with appropriate permission checks
-- ✅ Database Admin accessible to admin users with comprehensive interface
-- ✅ Trading page properly blocked for viewer accounts with clear access denial messages
-- ✅ Portfolio page shows read-only mode for viewers while maintaining full functionality for traders
-- ✅ Settings page dynamically adjusts tabs based on user role permissions
-- ✅ Options trading calculations fixed for decimal/float compatibility
-- ✅ Broker configuration supporting both stock and options trading fees
-- ✅ Complete database structure with priority system and technical indicators
-- ✅ Performance analysis and transaction history working correctly
+### Technical Implementation
+- **Database Initialization**: Successfully seeded with roles, permissions, market segments, and sample stocks
+- **Workflows**: Both Streamlit (port 5000) and FastAPI (port 8000) running concurrently
+- **Authentication**: Updated to use new User model with improved password hashing
+- **API Endpoints**: 
+  - `/auth/login` - JWT authentication
+  - `/users/me` - Current user info
+  - `/env/global` - Global environment variables (admin only)
+  - `/stocks` - Stock listing with market segments
+  - `/stocks/{symbol}/price_history` - Historical price data
+  - `/stocks/{symbol}/options` - Options chains
+  - `/orders` - Order placement and history
+  - `/positions` - Position tracking
+  - `/priority` - Priority stock recommendations
 
 # Database Schema & Entity Relationship Diagram
 
-## Entity Overview (9 Core Entities)
+## New Architecture (October 2025)
 
-The database follows a carefully designed Entity Relationship model with 9 core entities:
+### Entity Overview (17 Core Entities)
+
+The database now follows a normalized RBAC-based architecture:
 
 | Entity | Table Name | Type | Description |
 |--------|------------|------|-------------|
-| 1. Global Environment Variables | `environment_variables` | Configuration | System-wide configs like market hours, trading mode |
-| 2. Brokerage Info | `brokerage_info` | Static Reference | Broker metadata (Alpaca, Robinhood, etc.) |
-| 3. Accounts | `accounts` | User/Trading | Individual brokerage accounts per user |
-| 4. Stock Demographics | `stocks` | Reference Data | Company details, sector, market cap |
-| 5. Stock Price History | `stock_price_history` | Time-series | Historical OHLCV data with technical indicators |
-| 6. Priority Archive Price | `priority_archive_price` | Derived | Archived analytics snapshots for priority stocks |
-| 7. Priority Current Price | `priority_current_price` | Live Data | Real-time computed metrics per priority stock |
-| 8. Orders | `orders` | Trading | Buy/sell requests placed by accounts |
-| 9. Transaction Log | `transaction_log` | Audit/Record | Execution details with LIFO gain/loss |
+| **RBAC & Users** |
+| 1. Roles | `roles` | Access Control | User role definitions (admin, trader, viewer) |
+| 2. Permissions | `permissions` | Access Control | Permission definitions |
+| 3. RolePermission | `role_permissions` | Join Table | Maps roles to permissions |
+| 4. Users | `users` | Authentication | User accounts with role assignments |
+| **Configuration** |
+| 5. GlobalEnvVar | `global_env_vars` | Config | System-wide configuration |
+| 6. MarketSegment | `market_segments` | Classification | Market segments (sp500, sectors) |
+| 7. MarketSegmentEnvVar | `market_segment_env_vars` | Config | Segment-specific overrides |
+| 8. StockEnvVar | `stock_env_vars` | Config | Stock-specific overrides |
+| **Market Data** |
+| 9. Stock | `stocks` | Reference | Stock metadata with market segment |
+| 10. PriceHistory | `price_history` | Time-series | OHLCV data |
+| 11. StochasticHistory | `stochastic_history` | Time-series | Technical indicators (SMA, RSI, MACD, K, D) |
+| 12. OptionsChain | `options_chain` | Derivatives | Options contracts |
+| 13. PriorityStock | `priority_stocks` | Analysis | Flagged stocks with scores |
+| **Trading** |
+| 14. Account | `accounts` | Trading | User trading accounts |
+| 15. Position | `positions` | Trading | Current holdings |
+| 16. Order | `orders` | Trading | Buy/sell orders |
+| 17. Trade | `trades` | Audit | Executed transactions |
+| **Jobs & Logging** |
+| 18. NightlyJob | `nightly_jobs` | Batch | Scheduled job tracking |
+| 19. ChangeLog | `change_log` | Audit | System change history |
 
-## Entity Relationship Map
+## Entity Relationship Map (New Architecture)
 
 ```
-GlobalEnv (environment_variables)
-  ↓ (used globally by all entities)
-
-BrokerageInfo (brokerage_info) ──1:N── Accounts (accounts)
-                                          │
-                                          ├──1:N── Orders (orders) ──1:N── Transactions (transaction_log)
-                                          │           │                        │
-                                          └──1:N──────┘                        │
-                                                      │                        │
-                                                      ↓                        ↓
-                                          Stock (stocks) ──────────────────────┘
-                                              │
-                                              ├──1:N── PriceHistory (stock_price_history)
-                                              ├──1:N── PriorityArchive (priority_archive_price)
-                                              └──1:1── PriorityCurrent (priority_current_price)
+┌─────────────────── RBAC Layer ───────────────────┐
+│                                                   │
+│  Role ──1:N── RolePermission ──N:1── Permission  │
+│    │                                              │
+│    └──1:N── User                                 │
+│                 │                                 │
+└─────────────────┼─────────────────────────────────┘
+                  │
+┌─────────────────┼──── Configuration Layer ────────┐
+│                 │                                  │
+│  GlobalEnvVar   │                                  │
+│                 │                                  │
+│  MarketSegment ─┼─1:N── MarketSegmentEnvVar       │
+│       │         │                                  │
+└───────┼─────────┼──────────────────────────────────┘
+        │         │
+┌───────┼─────────┼──── Market Data Layer ──────────┐
+│       │         │                                  │
+│       └─1:N─ Stock ──1:N── StockEnvVar            │
+│                 │                                  │
+│                 ├──1:N── PriceHistory             │
+│                 ├──1:N── StochasticHistory        │
+│                 ├──1:N── OptionsChain             │
+│                 └──1:N── PriorityStock            │
+│                                                    │
+└────────────────────────────────────────────────────┘
+                     │
+┌────────────────────┼──── Trading Layer ────────────┐
+│                    │                                │
+│  User ──1:N── Account ──1:N── Position            │
+│                    │         (Stock/Option)        │
+│                    │                                │
+│                    └──1:N── Order                  │
+│                              │                      │
+│                              └──1:N── Trade        │
+│                                                     │
+└─────────────────────────────────────────────────────┘
 ```
-
-## Detailed Relationships
-
-### Primary Relationships
-
-1. **BrokerageInfo → Accounts** (1:Many)
-   - One broker can have many user accounts
-   - Foreign Key: `accounts.brokerage_id` → `brokerage_info.id`
-   - Cascade: RESTRICT (cannot delete broker if accounts exist)
-
-2. **Accounts → Orders** (1:Many)
-   - Each account places many orders
-   - Foreign Key: `orders.account_id` → `accounts.id`
-   - Cascade: RESTRICT (cannot delete account with existing orders)
-
-3. **Orders → TransactionLog** (1:Many)
-   - Each order results in one or more transactions
-   - Foreign Key: `transaction_log.order_id` → `orders.id`
-   - Cascade: CASCADE (deleting order removes its transactions)
-
-4. **Accounts → TransactionLog** (1:Many)
-   - Transactions are logged under the account
-   - Foreign Key: `transaction_log.account_id` → `accounts.id`
-   - Cascade: RESTRICT (cannot delete account with transaction history)
-
-### Stock-Related Relationships
-
-5. **Stock → StockPriceHistory** (1:Many)
-   - Each stock has many daily price records
-   - Foreign Key: `stock_price_history.stock_id` → `stocks.id`
-   - Cascade: CASCADE (deleting stock removes its history)
-
-6. **Stock → PriorityArchivePrice** (1:Many)
-   - Each stock can have archived analytics
-   - Foreign Key: `priority_archive_price.stock_id` → `stocks.id`
-   - Cascade: CASCADE (deleting stock removes archives)
-
-7. **Stock → PriorityCurrentPrice** (1:1)
-   - One current "priority" value per stock
-   - Foreign Key: `priority_current_price.stock_id` → `stocks.id`
-   - Cascade: CASCADE (deleting stock removes current price)
-
-### Trading Relationships
-
-8. **Orders → Stock** (Many:1)
-   - Each order targets one stock
-   - Foreign Key: `orders.stock_id` → `stocks.id`
-   - Cascade: RESTRICT (cannot delete stock with open orders)
-
-9. **TransactionLog → Stock** (Many:1)
-   - Each trade involves one stock
-   - Foreign Key: `transaction_log.stock_id` → `stocks.id`
-   - Cascade: RESTRICT (cannot delete stock with transaction history)
-
-10. **Users → Orders** (1:Many)
-    - Each user creates many orders
-    - Foreign Key: `orders.user_id` → `users.id`
-    - Cascade: RESTRICT
-
-11. **Users → TransactionLog** (1:Many)
-    - Each user has transaction history
-    - Foreign Key: `transaction_log.user_id` → `users.id`
-    - Cascade: RESTRICT
-
-## Database Schema Flow
-
-1. **System Level**: GlobalEnv defines system-wide configurations
-2. **Broker Level**: BrokerageInfo contains broker details and credentials
-3. **Account Level**: Accounts belong to brokers and users
-4. **Trading Level**: Orders originate from accounts targeting stocks
-5. **Execution Level**: Transactions record actual trade executions
-6. **Analytics Level**: Stock data feeds price history and priority calculations
 
 ## Key Design Principles
 
-- **Data Integrity**: Foreign keys with appropriate cascade behaviors ensure referential integrity
-- **Performance**: Composite indexes on frequently queried fields (symbol + date, user + symbol)
-- **Audit Trail**: Transaction log preserves complete trading history with LIFO calculations
-- **Flexibility**: Priority system allows dynamic stock monitoring without schema changes
-- **Scalability**: Separate tables for current vs archived priority data optimizes queries
+1. **RBAC First**: All access control managed through role-permission relationships
+2. **Three-Level Configuration**: Global → Market Segment → Stock-specific overrides
+3. **Normalized Market Data**: Separate tables for prices, stochastics, and options
+4. **Trading Isolation**: Clear separation between orders (intent) and trades (execution)
+5. **Audit Trail**: Complete history via trades and change log
+6. **Scalability**: Indexed time-series data optimized for performance
 
 # System Architecture
 
-## Frontend Architecture
-- **Streamlit Web Interface**: Multi-page application with role-based access control
-- **Page Structure**: Organized into dedicated modules (dashboard, trading, portfolio, admin, settings)
+## Dual-Stack Architecture
 
-- **Real-time Updates**: Live price monitoring and trading dashboard with auto-refresh capabilities
-- **Responsive Design**: Wide layout with expandable sidebar for navigation
+### Frontend: Streamlit (Port 5000)
+- **Multi-page Application**: Dashboard, Orders, Positions, Settings, Database Admin
+- **Compatibility Layer**: `services/compatibility_layer.py` provides DTOs that map new models to legacy UI contracts
+- **Role-Based Access**: Admin, Trader, Viewer with appropriate UI restrictions
+- **Real-time Updates**: Live price monitoring and engine status
+- **Beautiful Design**: Custom CSS with gradient buttons and spiritual theme
 
-## Backend Architecture
-- **SQLAlchemy ORM**: Database abstraction layer with declarative models
-- **Modular Services**: Separated concerns into distinct service layers (data fetching, trading engine, technical indicators)
-- **Broker Abstraction**: Generic broker API interface with specific implementations for different brokers
-- **Authentication System**: Role-based user management with hashed passwords and session management
+### Backend: FastAPI (Port 8000)
+- **RESTful API**: Complete CRUD operations for all entities
+- **JWT Authentication**: Secure token-based authentication
+- **Role-Based Endpoints**: Admin-only endpoints for configuration
+- **Pydantic Validation**: Request/response schema validation
+- **Auto-Documentation**: Swagger UI at `/docs`
 
-## Data Storage Solutions
-- **Primary Database**: SQLite with WAL mode for concurrent access
-- **Database Models**: Comprehensive schema including users, environment variables, brokerage info, accounts, stocks, price history, orders, and transaction logs
-- **Price Data Management**: Dual-table approach with current prices and archived historical data
-- **Configuration Storage**: Environment variables stored in database for runtime configuration
+## Data Flow
 
-## Authentication and Authorization
-- **User Roles**: Three-tier system (admin, trader, viewer) with hierarchical permissions
-- **Password Security**: SHA-256 hashing with salt for secure password storage
-- **Session Management**: Streamlit session state for user authentication persistence
-- **Permission Checks**: Role-based access control for different application features
+```
+User → Streamlit UI → Compatibility Layer → Database Models → SQLite/PostgreSQL
+                                                            ↓
+User → FastAPI → Pydantic Schemas → Database Models → SQLite/PostgreSQL
+```
 
-## Trading Engine Architecture
-- **Algorithmic Strategy**: Momentum-based trading using directional price movements
-- **Technical Indicators**: TA-Lib integration for ADX, DMI, moving averages, and pivot points
-- **Risk Management**: Position sizing based on account balance and configurable risk parameters
-- **Order Management**: Complete order lifecycle tracking with LIFO gain/loss calculations
+## Compatibility Layer Strategy
+
+The compatibility layer (`services/compatibility_layer.py`) enables gradual migration:
+
+1. **Legacy DTOs**: `LegacyStockView`, `LegacyOrderView`, `LegacyTradeView`, `LegacyEnvVar`
+2. **Helper Functions**: `get_priority_stocks()`, `get_all_orders()`, `get_all_trades()`
+3. **Derived Fields**: Calculates `last_price`, `change_percent`, `priority` from new schema
+4. **Authentication**: `verify_user_password()` compatible with new User model
+
+This approach allows:
+- Streamlit UI to continue working during migration
+- Incremental page rewrites to use new models directly
+- No loss of functionality during transition
+- Maintainable codebase with clear separation of concerns
 
 # External Dependencies
 
 ## Broker APIs
 - **Alpaca Trading API**: Primary broker integration for live and paper trading
-- **RobinHood API**: Secondary broker support with modular implementation
-- **Yahoo Finance (yfinance)**: Market data fetching for S&P 500 stocks and price history
+- **RobinHood API**: Secondary broker support (via external API calls)
 
 ## Market Data Sources
-- **Wikipedia S&P 500 List**: Automated fetching of current S&P 500 constituents
-- **Real-time Price Feeds**: Broker APIs for live price data and order execution
-- **Options Data**: Broker-provided options chain data for tradeable options identification
+- **Yahoo Finance (yfinance)**: Historical price data
+- **Broker APIs**: Real-time quotes and options chains
 
 ## Technical Analysis
-- **TA-Lib**: Technical analysis library for indicators (ADX, DMI, SMA, standard deviation)
-- **NumPy/Pandas**: Data manipulation and numerical calculations for trading algorithms
-- **Plotly**: Interactive charting for price analysis and portfolio visualization
+- **TA-Lib**: Technical indicators (pending integration with StochasticHistory)
+- **NumPy/Pandas**: Data manipulation
+- **Plotly**: Interactive charting
+
+## Backend Framework
+- **FastAPI**: Modern async Python API framework
+- **Pydantic**: Data validation and serialization
+- **PyJWT**: JSON Web Token authentication
+- **Uvicorn**: ASGI server
 
 ## Infrastructure
-- **SQLAlchemy**: Database ORM with SQLite backend (configurable for PostgreSQL)
-- **Streamlit**: Web application framework with built-in session management
-- **AsyncIO**: Asynchronous operations for concurrent price monitoring and trading execution
-- **Threading**: Background processes for continuous market monitoring
+- **SQLAlchemy**: Database ORM
+- **Streamlit**: Web UI framework
+- **SQLite**: Default database (PostgreSQL compatible)
 
-## Development and Deployment
-- **Environment Configuration**: Database-stored configuration variables for runtime flexibility
-- **Logging**: Structured logging for trading operations and system monitoring
-- **Error Handling**: Comprehensive exception handling for broker API failures and market disruptions
+# Development Guidelines
+
+## Working with the New Schema
+
+### Adding New Features
+1. Define models in `database/models.py`
+2. Create Pydantic schemas in `api/main.py`
+3. Add API endpoints in `api/main.py`
+4. Update compatibility layer if Streamlit UI needs access
+5. Test both FastAPI and Streamlit interfaces
+
+### Database Changes
+1. **NEVER** manually write SQL migrations
+2. Modify models in `database/models.py`
+3. Delete `trading_platform.db`
+4. Run `python3 -c "from database.database import init_database; init_database()"`
+5. Restart both workflows
+
+### Authentication
+- FastAPI uses JWT tokens via `/auth/login`
+- Streamlit uses session state with `verify_user_password()`
+- Passwords hashed with SHA-256 + salt
+
+### Testing
+- FastAPI: `curl http://localhost:8000/endpoint`
+- Streamlit: Access via webview on port 5000
+- Both workflows must be running concurrently
+
+## API Development Best Practices
+
+1. **Use Role Checks**: `require_role(user, ["admin"])` for protected endpoints
+2. **Validate Input**: Use Pydantic models for all requests
+3. **Return Proper Status Codes**: 200, 201, 400, 401, 403, 404, 500
+4. **Document Endpoints**: Add clear docstrings and response models
+5. **Handle Errors**: Use try/except with proper error responses
+
+## Migration Progress
+
+### ✅ Completed
+- Database schema replacement
+- FastAPI backend setup
+- Compatibility layer implementation
+- Core Streamlit pages updated (app.py)
+- Authentication system updated
+- Both workflows running successfully
+
+### 🚧 Pending
+- Update remaining app_pages/* to use new models directly
+- Integrate stochastic indicators into trading engine
+- Add options trading endpoints to FastAPI
+- Update broker APIs to work with new Account model
+- Create admin UI for role/permission management
+- Migrate trading engine to use new PriorityStock scoring
+
+### 📝 Future Enhancements
+- WebSocket support for real-time updates
+- Redis caching layer
+- PostgreSQL migration for production
+- GraphQL API option
+- Mobile-responsive UI
+- Advanced charting with stochastic overlays
