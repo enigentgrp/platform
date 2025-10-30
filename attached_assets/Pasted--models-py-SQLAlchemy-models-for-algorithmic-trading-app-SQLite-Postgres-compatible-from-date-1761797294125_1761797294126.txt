@@ -1,0 +1,239 @@
+# models.py
+# SQLAlchemy models for algorithmic trading app (SQLite / Postgres-compatible)
+from datetime import datetime, date
+from typing import Optional
+
+from sqlalchemy import (
+    create_engine, Column, Integer, BigInteger, String, Text, Boolean,
+    DateTime, Date, Numeric, ForeignKey, UniqueConstraint
+)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
+
+Base = declarative_base()
+
+# ------------- RBAC & Users -------------
+class Role(Base):
+    __tablename__ = "roles"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+
+    permissions = relationship("RolePermission", back_populates="role")
+
+
+class Permission(Base):
+    __tablename__ = "permissions"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+
+
+class RolePermission(Base):
+    __tablename__ = "role_permissions"
+    role_id = Column(Integer, ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True)
+    permission_id = Column(Integer, ForeignKey("permissions.id", ondelete="CASCADE"), primary_key=True)
+
+    role = relationship("Role", back_populates="permissions")
+    # permission relation optional
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    email = Column(String, nullable=True)
+    role_id = Column(Integer, ForeignKey("roles.id"))
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+    role = relationship("Role")
+
+
+# ------------- Environment Variables & Market Segments -------------
+class GlobalEnvVar(Base):
+    __tablename__ = "global_env_vars"
+    name = Column(String, primary_key=True)
+    value = Column(String, nullable=False)
+    value_type = Column(String, nullable=False)  # 'int','float','pct','str','bool'
+    description = Column(Text)
+
+
+class MarketSegment(Base):
+    __tablename__ = "market_segments"
+    id = Column(Integer, primary_key=True)
+    slug = Column(String, unique=True, nullable=False)
+    name = Column(String, nullable=True)
+
+
+class MarketSegmentEnvVar(Base):
+    __tablename__ = "market_segment_env_vars"
+    market_segment_id = Column(Integer, ForeignKey("market_segments.id", ondelete="CASCADE"), primary_key=True)
+    name = Column(String, primary_key=True)
+    value = Column(String, nullable=False)
+
+    market_segment = relationship("MarketSegment")
+
+
+class Stock(Base):
+    __tablename__ = "stocks"
+    id = Column(Integer, primary_key=True)
+    symbol = Column(String, unique=True, nullable=False)
+    name = Column(String)
+    market_segment_id = Column(Integer, ForeignKey("market_segments.id"))
+    shares_outstanding = Column(BigInteger)
+    is_active = Column(Boolean, default=True)
+
+    market_segment = relationship("MarketSegment")
+    env_vars = relationship("StockEnvVar", back_populates="stock")
+
+
+class StockEnvVar(Base):
+    __tablename__ = "stock_env_vars"
+    stock_id = Column(Integer, ForeignKey("stocks.id", ondelete="CASCADE"), primary_key=True)
+    name = Column(String, primary_key=True)
+    value = Column(String, nullable=False)
+
+    stock = relationship("Stock", back_populates="env_vars")
+
+
+# ------------- Price & Derived History -------------
+class PriceHistory(Base):
+    __tablename__ = "price_history"
+    id = Column(BigInteger, primary_key=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id"))
+    ts = Column(DateTime(timezone=True), nullable=False)
+    open = Column(Numeric)
+    high = Column(Numeric)
+    low = Column(Numeric)
+    close = Column(Numeric)
+    volume = Column(BigInteger)
+
+    stock = relationship("Stock")
+
+
+class StochasticHistory(Base):
+    __tablename__ = "stochastic_history"
+    id = Column(BigInteger, primary_key=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id"))
+    ts = Column(DateTime(timezone=True), nullable=False)
+    sma_21 = Column(Numeric)
+    sd_21 = Column(Numeric)
+    rsi_14 = Column(Numeric)
+    macd = Column(Numeric)
+    k_14 = Column(Numeric)
+    d_3 = Column(Numeric)
+
+    stock = relationship("Stock")
+
+
+# ------------- Options, Accounts, Positions, Orders, Trades -------------
+class OptionsChain(Base):
+    __tablename__ = "options_chain"
+    id = Column(BigInteger, primary_key=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id"))
+    option_symbol = Column(String, nullable=False)
+    strike = Column(Numeric, nullable=False)
+    expiry = Column(Date, nullable=False)
+    type = Column(String, nullable=False)  # 'CALL' or 'PUT'
+    last_price = Column(Numeric)
+    bid = Column(Numeric)
+    ask = Column(Numeric)
+    volume = Column(BigInteger)
+    open_interest = Column(BigInteger)
+    retrieved_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+    stock = relationship("Stock")
+
+
+class Account(Base):
+    __tablename__ = "accounts"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    name = Column(String)
+    cash_balance = Column(Numeric, default=0)
+    buying_power = Column(Numeric, default=0)
+
+    user = relationship("User")
+    positions = relationship("Position", back_populates="account")
+
+
+class Position(Base):
+    __tablename__ = "positions"
+    id = Column(BigInteger, primary_key=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"))
+    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=True)
+    option_id = Column(BigInteger, ForeignKey("options_chain.id"), nullable=True)
+    quantity = Column(Integer, nullable=False)
+    avg_price = Column(Numeric, nullable=False)
+    side = Column(String, nullable=False)  # 'LONG' / 'SHORT'
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+    account = relationship("Account", back_populates="positions")
+    stock = relationship("Stock")
+    option = relationship("OptionsChain")
+
+
+class Order(Base):
+    __tablename__ = "orders"
+    id = Column(BigInteger, primary_key=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"))
+    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=True)
+    option_id = Column(BigInteger, ForeignKey("options_chain.id"), nullable=True)
+    order_type = Column(String, nullable=False)  # 'MARKET','LIMIT'
+    side = Column(String, nullable=False)  # 'BUY','SELL'
+    quantity = Column(Integer, nullable=False)
+    price = Column(Numeric, nullable=True)
+    status = Column(String, nullable=False, default="PENDING")
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    executed_at = Column(DateTime(timezone=True), nullable=True)
+
+    account = relationship("Account")
+
+
+class Trade(Base):
+    __tablename__ = "trades"
+    id = Column(BigInteger, primary_key=True)
+    order_id = Column(BigInteger, ForeignKey("orders.id", ondelete="SET NULL"))
+    executed_price = Column(Numeric)
+    executed_qty = Column(Integer)
+    executed_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+# ------------- Priority & Jobs & Change Log -------------
+class PriorityStock(Base):
+    __tablename__ = "priority_stocks"
+    id = Column(BigInteger, primary_key=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id"))
+    reason = Column(Text)
+    score = Column(Numeric)
+    flagged_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+    stock = relationship("Stock")
+
+
+class NightlyJob(Base):
+    __tablename__ = "nightly_jobs"
+    id = Column(BigInteger, primary_key=True)
+    job_date = Column(Date, nullable=False)
+    status = Column(String, nullable=False)
+    started_at = Column(DateTime(timezone=True))
+    finished_at = Column(DateTime(timezone=True))
+    notes = Column(Text)
+
+
+class ChangeLog(Base):
+    __tablename__ = "change_log"
+    id = Column(BigInteger, primary_key=True)
+    change_tag = Column(String, nullable=False)
+    details = Column(Text)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+# ------------- DB bootstrap helper -------------
+def init_db(db_url="sqlite:///./earnalot.db"):
+    engine = create_engine(db_url, connect_args={"check_same_thread": False} if db_url.startswith("sqlite") else {})
+    Base.metadata.create_all(engine)
+    return engine
+
+# Example:
+# engine = init_db()
+# Session = sessionmaker(bind=engine)
