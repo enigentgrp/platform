@@ -130,12 +130,37 @@ class StochasticHistory(Base):
     id = Column(BigInteger, primary_key=True)
     stock_id = Column(Integer, ForeignKey("stocks.id", ondelete="CASCADE"))
     ts = Column(DateTime(timezone=True), nullable=False, index=True)
+    
+    # Moving averages and standard deviation
     sma_21 = Column(Numeric)
     sd_21 = Column(Numeric)
+    
+    # RSI and MACD
     rsi_14 = Column(Numeric)
     macd = Column(Numeric)
-    k_14 = Column(Numeric)
-    d_3 = Column(Numeric)
+    macd_signal = Column(Numeric)
+    
+    # Stochastic Oscillator
+    k_14 = Column(Numeric)  # %K
+    d_3 = Column(Numeric)   # %D (3-period MA of %K)
+    
+    # Wilder's Directional Movement Indicators (DMI)
+    adx = Column(Numeric)   # Average Directional Index
+    di_plus = Column(Numeric)   # DI+
+    di_minus = Column(Numeric)  # DI-
+    
+    # Commodity Channel Index
+    cci_14 = Column(Numeric)
+    
+    # Bollinger Bands (20-day, 2 SD)
+    bollinger_upper = Column(Numeric)
+    bollinger_middle = Column(Numeric)  # Same as SMA_20
+    bollinger_lower = Column(Numeric)
+    
+    # Pivot Points
+    pivot_point = Column(Numeric)
+    resistance_1 = Column(Numeric)
+    support_1 = Column(Numeric)
 
     stock = relationship("Stock", back_populates="stochastic_history")
 
@@ -174,8 +199,26 @@ class Account(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"))
     name = Column(String)
+    
+    # Broker integration
+    broker_platform = Column(String)  # 'robinhood', 'alpaca', etc.
+    broker_account_id = Column(String)  # External account ID
+    broker_credentials_encrypted = Column(Text)  # Encrypted JSON with credentials
+    
+    # Account balances
     cash_balance = Column(Numeric, default=0)
     buying_power = Column(Numeric, default=0)
+    total_balance = Column(Numeric, default=0)
+    
+    # Trading settings
+    is_active = Column(Boolean, default=True)
+    day_trade_enabled = Column(Boolean, default=False)
+    min_balance_required = Column(Numeric, default=25000)  # For day trading
+    transaction_fees = Column(Numeric, default=0)  # Per-trade fee
+    
+    # Account metadata
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    last_synced_at = Column(DateTime(timezone=True))
 
     user = relationship("User", back_populates="accounts")
     positions = relationship("Position", back_populates="account")

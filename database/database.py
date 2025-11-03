@@ -94,13 +94,42 @@ def init_database():
             )
             session.add(admin_user)
         
-        # Create default environment variables
+        # Create default environment variables per trading algorithm requirements
         default_env_vars = [
+            # Core trading settings
             ('TRADING_MODE', 'paper', 'str', 'Trading mode: paper or live'),
-            ('PRICE_UPDATE_INTERVAL', '30', 'int', 'Seconds between price updates'),
-            ('MAX_POSITION_SIZE_PERCENT', '5', 'pct', 'Maximum position size as percentage'),
+            ('BROKER_PLATFORM', 'robinhood', 'str', 'Primary broker: robinhood or alpaca'),
+            ('DAY_TRADING_ENABLED', 'true', 'bool', 'Enable day trading strategies'),
+            
+            # Price monitoring
+            ('PRICE_CHECK_INTERVAL', '5', 'int', 'Seconds between price checks during trading hours'),
+            ('CONSECUTIVE_PERIODS', '3', 'int', 'Number of consecutive periods for trend confirmation'),
+            ('PRICE_UPDATE_INTERVAL', '30', 'int', 'Seconds between price updates (legacy)'),
+            
+            # Cash allocation for options
+            ('CASH_INVEST_OPTION_PCT', '10', 'pct', 'Max % of cash to invest in options per trade'),
+            ('OPTION_PCT_BUY', '5', 'pct', 'Max % of available options to buy'),
+            ('CASH_INVEST_STOCK_PCT', '15', 'pct', 'Max % of cash to invest in stocks per trade'),
+            ('STOCK_PCT_SELL', '50', 'pct', 'Percentage of stock position to sell on signal'),
+            
+            # Risk management
+            ('MOMENTUM_DECR_PCT', '25', 'pct', 'Momentum decrease % to trigger profit lock'),
+            ('LOSS_PCT_LIMIT', '50', 'pct', 'Max % loss of earlier profit before exit'),
+            ('MAX_POSITION_SIZE_PERCENT', '5', 'pct', 'Maximum single position size'),
             ('RISK_MANAGEMENT_ENABLED', 'true', 'bool', 'Enable risk management'),
-            ('TECHNICAL_ANALYSIS_PERIODS', '14', 'int', 'Periods for technical analysis'),
+            
+            # End of day
+            ('EOD_LIMIT', '15', 'int', 'Minutes before market close to exit day trades'),
+            
+            # Options criteria
+            ('MIN_OPTIONS_VOL', '1000', 'int', 'Minimum daily volume for tradeable options'),
+            ('OPT_STRIKE_PRICE_PCT_TARGET', '5', 'pct', 'Target % above/below current price for strike'),
+            
+            # Technical analysis
+            ('TECHNICAL_ANALYSIS_PERIODS', '14', 'int', 'Periods for RSI and CCI calculations'),
+            ('MOVING_AVERAGE_PERIOD', '21', 'int', 'Period for simple moving average'),
+            ('BOLLINGER_BAND_SD', '2', 'int', 'Standard deviations for Bollinger Bands'),
+            ('PRIORITY_SD_THRESHOLD', '1', 'int', 'SD threshold for priority stock flagging'),
         ]
         
         for name, value, value_type, description in default_env_vars:
@@ -114,12 +143,20 @@ def init_database():
                 )
                 session.add(env_var)
         
-        # Create default market segments
+        # Create default market segments (including sector ETFs per trading algorithm spec)
         segments_data = [
             ('sp500', 'S&P 500'),
             ('technology', 'Technology Sector'),
             ('healthcare', 'Healthcare Sector'),
             ('financials', 'Financial Sector'),
+            ('energy', 'Energy Sector'),
+            ('materials', 'Materials Sector'),
+            ('industrials', 'Industrials Sector'),
+            ('consumer_discretionary', 'Consumer Discretionary'),
+            ('consumer_staples', 'Consumer Staples'),
+            ('communication', 'Communication Services'),
+            ('utilities', 'Utilities Sector'),
+            ('real_estate', 'Real Estate Sector'),
         ]
         
         segments = {}
@@ -133,7 +170,22 @@ def init_database():
             else:
                 segments[slug] = existing
         
-        # Initialize sample stocks
+        # Initialize sector ETFs (per trading algorithm spec - always monitored with priority 9)
+        sector_etfs = [
+            {'symbol': 'XLE', 'name': 'Energy Select Sector SPDR Fund', 'segment': 'energy'},
+            {'symbol': 'XLB', 'name': 'Materials Select Sector SPDR Fund', 'segment': 'materials'},
+            {'symbol': 'XLI', 'name': 'Industrial Select Sector SPDR Fund', 'segment': 'industrials'},
+            {'symbol': 'XLY', 'name': 'Consumer Discretionary Select Sector SPDR Fund', 'segment': 'consumer_discretionary'},
+            {'symbol': 'XLP', 'name': 'Consumer Staples Select Sector SPDR Fund', 'segment': 'consumer_staples'},
+            {'symbol': 'XLV', 'name': 'Health Care Select Sector SPDR Fund', 'segment': 'healthcare'},
+            {'symbol': 'XLF', 'name': 'Financial Select Sector SPDR Fund', 'segment': 'financials'},
+            {'symbol': 'XLK', 'name': 'Technology Select Sector SPDR Fund', 'segment': 'technology'},
+            {'symbol': 'XLC', 'name': 'Communication Services Select Sector SPDR Fund', 'segment': 'communication'},
+            {'symbol': 'XLU', 'name': 'Utilities Select Sector SPDR Fund', 'segment': 'utilities'},
+            {'symbol': 'XLRE', 'name': 'Real Estate Select Sector SPDR Fund', 'segment': 'real_estate'},
+        ]
+        
+        # Initialize sample S&P 500 stocks with actively traded options
         sample_stocks = [
             {'symbol': 'AAPL', 'name': 'Apple Inc.', 'shares_outstanding': 15000000000, 'segment': 'technology'},
             {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'shares_outstanding': 7500000000, 'segment': 'technology'},
@@ -147,7 +199,10 @@ def init_database():
             {'symbol': 'V', 'name': 'Visa Inc.', 'shares_outstanding': 2000000000, 'segment': 'financials'}
         ]
         
-        for stock_data in sample_stocks:
+        # Combine ETFs and stocks for insertion
+        all_stocks = sector_etfs + sample_stocks
+        
+        for stock_data in all_stocks:
             existing = session.query(Stock).filter(Stock.symbol == stock_data['symbol']).first()
             if not existing:
                 segment_slug = stock_data.pop('segment')

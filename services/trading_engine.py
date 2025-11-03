@@ -7,8 +7,9 @@ import numpy as np
 
 from database.database import get_session
 from database.models import (
-    Stock, PriorityCurrentPrice, Order, TransactionLog, 
-    Account, EnvironmentVariable
+    Stock, PriorityStock, PriceHistory, StochasticHistory,
+    Order, Trade, Account, GlobalEnvVar, MarketSegment,
+    OptionsChain, Position
 )
 from services.broker_apis import BrokerManager
 from services.technical_indicators import TechnicalIndicators
@@ -24,32 +25,76 @@ class TradingEngine:
     def __init__(self):
         self.broker_manager = BrokerManager()
         self.is_running = False
-        self.trading_mode = 'paper'  # paper or live
-        self.max_position_size_percent = 5.0
-        self.price_update_interval = 30  # seconds
-        self.momentum_periods = 3
-        self.position_size_percent = 2.0
         
-        # Load configuration from environment variables
+        # Trading parameters (defaults, overridden by DB config)
+        self.trading_mode = 'paper'
+        self.broker_platform = 'robinhood'  # Preferred: zero transaction fees
+        self.day_trading_enabled = True
+        
+        # Price monitoring
+        self.price_check_interval = 5
+        self.consecutive_periods = 3
+        
+        # Cash allocation
+        self.cash_invest_option_pct = 10.0
+        self.option_pct_buy = 5.0
+        self.cash_invest_stock_pct = 15.0
+        self.stock_pct_sell = 50.0
+        
+        # Risk management
+        self.momentum_decr_pct = 25.0
+        self.loss_pct_limit = 50.0
+        self.max_position_size_percent = 5.0
+        
+        # End of day
+        self.eod_limit = 15  # minutes
+        
+        # Options criteria
+        self.min_options_vol = 1000
+        self.opt_strike_price_pct_target = 5.0
+        
+        # Technical analysis
+        self.moving_average_period = 21
+        self.priority_sd_threshold = 1.0
+        
+        # Load configuration from database
         self._load_configuration()
         
         # Authenticate with brokers
         self.broker_manager.authenticate_all()
     
     def _load_configuration(self):
-        """Load configuration from environment variables table"""
+        """Load configuration from GlobalEnvVar table"""
         session = get_session()
         try:
-            env_vars = session.query(EnvironmentVariable).all()
-            for var in env_vars:
-                if var.key == 'TRADING_MODE':
-                    self.trading_mode = var.value
-                elif var.key == 'MAX_POSITION_SIZE_PERCENT':
-                    self.max_position_size_percent = float(var.value)
-                elif var.key == 'PRICE_UPDATE_INTERVAL':
-                    self.price_update_interval = int(var.value)
-                elif var.key == 'ACTIVE_BROKER':
-                    self.broker_manager.set_active_broker(var.value)
+            env_vars = session.query(GlobalEnvVar).all()
+            config_map = {var.name: var.value for var in env_vars}
+            
+            # Update instance variables from database
+            self.trading_mode = config_map.get('TRADING_MODE', self.trading_mode)
+            self.broker_platform = config_map.get('BROKER_PLATFORM', self.broker_platform)
+            self.day_trading_enabled = config_map.get('DAY_TRADING_ENABLED', 'true').lower() == 'true'
+            
+            self.price_check_interval = int(config_map.get('PRICE_CHECK_INTERVAL', self.price_check_interval))
+            self.consecutive_periods = int(config_map.get('CONSECUTIVE_PERIODS', self.consecutive_periods))
+            
+            self.cash_invest_option_pct = float(config_map.get('CASH_INVEST_OPTION_PCT', self.cash_invest_option_pct))
+            self.option_pct_buy = float(config_map.get('OPTION_PCT_BUY', self.option_pct_buy))
+            self.cash_invest_stock_pct = float(config_map.get('CASH_INVEST_STOCK_PCT', self.cash_invest_stock_pct))
+            self.stock_pct_sell = float(config_map.get('STOCK_PCT_SELL', self.stock_pct_sell))
+            
+            self.momentum_decr_pct = float(config_map.get('MOMENTUM_DECR_PCT', self.momentum_decr_pct))
+            self.loss_pct_limit = float(config_map.get('LOSS_PCT_LIMIT', self.loss_pct_limit))
+            self.max_position_size_percent = float(config_map.get('MAX_POSITION_SIZE_PERCENT', self.max_position_size_percent))
+            
+            self.eod_limit = int(config_map.get('EOD_LIMIT', self.eod_limit))
+            self.min_options_vol = int(config_map.get('MIN_OPTIONS_VOL', self.min_options_vol))
+            self.opt_strike_price_pct_target = float(config_map.get('OPT_STRIKE_PRICE_PCT_TARGET', self.opt_strike_price_pct_target))
+            
+            self.moving_average_period = int(config_map.get('MOVING_AVERAGE_PERIOD', self.moving_average_period))
+            self.priority_sd_threshold = float(config_map.get('PRIORITY_SD_THRESHOLD', self.priority_sd_threshold))
+            
+            logger.info(f"Configuration loaded: {self.trading_mode} mode on {self.broker_platform}")
         except Exception as e:
             logger.error(f"Error loading configuration: {e}")
         finally:
@@ -97,7 +142,7 @@ class TradingEngine:
         while self.is_running:
             try:
                 await self._execute_trading_cycle()
-                await asyncio.sleep(self.price_update_interval)
+                await asyncio.sleep(self.price_check_interval)
             except Exception as e:
                 logger.error(f"Error in trading loop: {e}")
                 await asyncio.sleep(60)  # Wait longer on error
