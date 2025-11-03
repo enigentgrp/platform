@@ -4,7 +4,7 @@ import plotly.express as px
 from datetime import datetime, timedelta
 
 from database.database import get_session
-from database.models import User, Order, TransactionLog, Stock, EnvironmentVariable
+from database.models import User, Order, Trade, Stock, GlobalEnvVar
 from utils.auth import check_permission, create_user, update_user_role, deactivate_user
 from services.data_fetcher import DataFetcher
 
@@ -166,9 +166,9 @@ def _show_system_monitoring():
             st.metric("Total Orders", total_orders, f"{pending_orders} pending")
         
         with col4:
-            total_transactions = session.query(TransactionLog).count()
-            recent_transactions = session.query(TransactionLog).filter(
-                TransactionLog.transaction_date >= datetime.now() - timedelta(days=1)
+            total_transactions = session.query(Trade).count()
+            recent_transactions = session.query(Trade).filter(
+                Trade.executed_at >= datetime.now() - timedelta(days=1)
             ).count()
             st.metric("Transactions", total_transactions, f"{recent_transactions} today")
         
@@ -245,8 +245,8 @@ def _show_database_management():
                 "Users": session.query(User).count(),
                 "Stocks": session.query(Stock).count(),
                 "Orders": session.query(Order).count(),
-                "Transactions": session.query(TransactionLog).count(),
-                "Environment Variables": session.query(EnvironmentVariable).count()
+                "Transactions": session.query(Trade).count(),
+                "Environment Variables": session.query(GlobalEnvVar).count()
             }
             
             stats_df = pd.DataFrame(list(table_stats.items()), columns=['Table', 'Records'])
@@ -309,7 +309,7 @@ def _show_database_management():
         # Environment variables management
         st.write("**Environment Variables**")
         
-        env_vars = session.query(EnvironmentVariable).all()
+        env_vars = session.query(GlobalEnvVar).all()
         
         if env_vars:
             env_data = []
@@ -341,8 +341,8 @@ def _show_trading_analytics():
         st.write("**Trading Summary**")
         
         # Get recent transactions
-        recent_transactions = session.query(TransactionLog).filter(
-            TransactionLog.transaction_date >= datetime.now() - timedelta(days=30)
+        recent_transactions = session.query(Trade).filter(
+            Trade.executed_at >= datetime.now() - timedelta(days=30)
         ).all()
         
         if recent_transactions:

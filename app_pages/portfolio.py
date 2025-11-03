@@ -5,7 +5,7 @@ import plotly.express as px
 from datetime import datetime, timedelta
 
 from database.database import get_session
-from database.models import Stock, Order, TransactionLog, Account, User
+from database.models import Stock, Order, Trade, Account, User
 from services.broker_apis import BrokerManager
 from utils.helpers import (
     format_currency, format_percentage, calculate_portfolio_value,
@@ -236,7 +236,7 @@ def _show_performance_analysis():
     
     try:
         # Get transaction history for performance calculation
-        transactions = session.query(TransactionLog).order_by(TransactionLog.transaction_date).all()
+        transactions = session.query(Trade).order_by(Trade.executed_at).all()
         
         if not transactions:
             st.info("No transaction history available for performance analysis")
@@ -451,9 +451,9 @@ def _show_transaction_history():
             )
         
         # Query transactions
-        query = session.query(TransactionLog).filter(
-            TransactionLog.transaction_date >= datetime.combine(start_date, datetime.min.time()),
-            TransactionLog.transaction_date <= datetime.combine(end_date, datetime.max.time())
+        query = session.query(Trade).filter(
+            Trade.executed_at >= datetime.combine(start_date, datetime.min.time()),
+            Trade.executed_at <= datetime.combine(end_date, datetime.max.time())
         )
         
         # Apply filters
@@ -466,7 +466,7 @@ def _show_transaction_history():
         elif transaction_type == "Sell Only":
             query = query.filter(TransactionLog.side == 'sell')
         
-        transactions = query.order_by(TransactionLog.transaction_date.desc()).all()
+        transactions = query.order_by(Trade.executed_at.desc()).all()
         
         if transactions:
             # Prepare transaction data

@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 from database.database import get_session
-from database.models import EnvironmentVariable, BrokerageInfo, Account, User
+from database.models import GlobalEnvVar, Account, User
 from utils.auth import check_permission, hash_password
 from services.data_fetcher import DataFetcher
 from utils.broker_status_widget import display_animated_broker_status
@@ -74,7 +74,7 @@ def _show_trading_settings():
     session = get_session()
     try:
         # Get current environment variables
-        env_vars = {var.key: var.value for var in session.query(EnvironmentVariable).all()}
+        env_vars = {var.key: var.value for var in session.query(GlobalEnvVar).all()}
         
         col1, col2 = st.columns(2)
         
@@ -177,12 +177,12 @@ def _show_broker_configuration():
     session = get_session()
     try:
         # Get current configuration from environment variables
-        trading_mode_var = session.query(EnvironmentVariable)\
-            .filter(EnvironmentVariable.key == 'TRADING_MODE').first()
-        paper_broker_var = session.query(EnvironmentVariable)\
-            .filter(EnvironmentVariable.key == 'PAPER_TRADING_BROKER').first()
-        live_broker_var = session.query(EnvironmentVariable)\
-            .filter(EnvironmentVariable.key == 'LIVE_TRADING_BROKER').first()
+        trading_mode_var = session.query(GlobalEnvVar)\
+            .filter(GlobalEnvVar.name == 'TRADING_MODE').first()
+        paper_broker_var = session.query(GlobalEnvVar)\
+            .filter(GlobalEnvVar.name == 'PAPER_TRADING_BROKER').first()
+        live_broker_var = session.query(GlobalEnvVar)\
+            .filter(GlobalEnvVar.name == 'LIVE_TRADING_BROKER').first()
         
         current_mode = trading_mode_var.value if trading_mode_var else 'paper'
         current_paper_broker = paper_broker_var.value if paper_broker_var else 'alpaca_paper'
@@ -251,8 +251,8 @@ def _show_broker_configuration():
         if st.button("💾 Save Broker Configuration", type="primary"):
             # Update or create environment variables
             def update_env_var(key: str, value: str):
-                env_var = session.query(EnvironmentVariable)\
-                    .filter(EnvironmentVariable.key == key).first()
+                env_var = session.query(GlobalEnvVar)\
+                    .filter(GlobalEnvVar.name == key).first()
                 if env_var:
                     env_var.value = value
                 else:
@@ -540,8 +540,8 @@ def _save_environment_variables(session, variables):
     """Save environment variables to database"""
     try:
         for key, value in variables.items():
-            env_var = session.query(EnvironmentVariable).filter(
-                EnvironmentVariable.key == key
+            env_var = session.query(GlobalEnvVar).filter(
+                GlobalEnvVar.name == key
             ).first()
             
             if env_var:

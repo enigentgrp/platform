@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 from services.trading_engine import TradingEngine
 from database.database import get_session
-from database.models import EnvironmentVariable, Order, TransactionLog
+from database.models import GlobalEnvVar, Order, Trade
 from utils.auth import check_permission
 
 def show_trading_engine_control():
@@ -39,8 +39,8 @@ def show_trading_engine_control():
     with col2:
         session = get_session()
         try:
-            trading_mode = session.query(EnvironmentVariable).filter(
-                EnvironmentVariable.key == 'TRADING_MODE'
+            trading_mode = session.query(GlobalEnvVar).filter(
+                GlobalEnvVar.name == 'TRADING_MODE'
             ).first()
             mode = trading_mode.value if trading_mode else 'paper'
             st.metric("Trading Mode", mode.title())
@@ -146,8 +146,8 @@ def show_trading_engine_control():
     session = get_session()
     try:
         # Get current configuration
-        config_vars = session.query(EnvironmentVariable).filter(
-            EnvironmentVariable.key.in_([
+        config_vars = session.query(GlobalEnvVar).filter(
+            GlobalEnvVar.name.in_([
                 'PRICE_UPDATE_INTERVAL',
                 'MAX_POSITION_SIZE_PERCENT', 
                 'PRIORITY_EVALUATION_PERIODS',
@@ -203,8 +203,8 @@ def show_trading_engine_control():
             }
             
             for key, value in updates.items():
-                env_var = session.query(EnvironmentVariable).filter(
-                    EnvironmentVariable.key == key
+                env_var = session.query(GlobalEnvVar).filter(
+                    GlobalEnvVar.name == key
                 ).first()
                 
                 if env_var:

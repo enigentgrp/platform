@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Tuple
 from datetime import datetime, timedelta
-from database.models import TransactionLog
+from database.models import Trade
 
 def format_currency(amount: float) -> str:
     """Format amount as currency string"""
@@ -57,21 +57,24 @@ def calculate_max_drawdown(returns: np.array) -> float:
     drawdown = (cumulative - running_max) / running_max
     return np.min(drawdown)
 
-def calculate_lifo_pnl(transactions: List[TransactionLog], current_price: float) -> Dict:
+def calculate_lifo_pnl(transactions: List[Trade], current_price: float) -> Dict:
     """Calculate P&L using LIFO (Last In, First Out) method"""
     buys = []
     sells = []
     
     # Separate buy and sell transactions
+    # Note: Trade is linked to Order, so we need to access order.side
     for transaction in transactions:
-        if transaction.side == 'buy':
+        # Get the order side through the relationship
+        order_side = transaction.order.side if transaction.order else 'buy'
+        if order_side == 'buy':
             buys.append(transaction)
         else:
             sells.append(transaction)
     
     # Sort transactions by date
-    buys.sort(key=lambda x: x.transaction_date, reverse=True)  # LIFO - most recent first
-    sells.sort(key=lambda x: x.transaction_date)
+    buys.sort(key=lambda x: x.executed_at, reverse=True)  # LIFO - most recent first
+    sells.sort(key=lambda x: x.executed_at)
     
     realized_pnl = 0.0
     unrealized_pnl = 0.0
@@ -82,23 +85,23 @@ def calculate_lifo_pnl(transactions: List[TransactionLog], current_price: float)
     remaining_buys = buys.copy()
     
     for sell in sells:
-        sell_quantity = sell.quantity
-        sell_proceeds = sell_quantity * sell.price
+        sell_quantity = sell.executed_qty
+        sell_proceeds = sell_quantity * sell.executed_price
         sell_cost_basis = 0
         
         # Match against most recent buys (LIFO)
         while sell_quantity > 0 and remaining_buys:
             buy = remaining_buys[0]
             
-            if buy.quantity <= sell_quantity:
+            if buy.executed_qty <= sell_quantity:
                 # Use entire buy position
-                sell_cost_basis += buy.quantity * buy.price
-                sell_quantity -= buy.quantity
+                sell_cost_basis += buy.executed_qty * buy.executed_price
+                sell_quantity -= buy.executed_qty
                 remaining_buys.pop(0)
             else:
                 # Partial use of buy position
-                sell_cost_basis += sell_quantity * buy.price
-                buy.quantity -= sell_quantity
+                sell_cost_basis += sell_quantity * buy.executed_price
+                buy.executed_qty -= sell_quantity
                 sell_quantity = 0
         
         # Calculate realized P&L for this sell
@@ -106,8 +109,8 @@ def calculate_lifo_pnl(transactions: List[TransactionLog], current_price: float)
     
     # Calculate unrealized P&L from remaining positions
     for buy in remaining_buys:
-        remaining_quantity += buy.quantity
-        remaining_cost_basis += buy.quantity * buy.price
+        remaining_quantity += buy.executed_qty
+        remaining_cost_basis += buy.executed_qty * buy.executed_price
     
     if remaining_quantity > 0:
         current_value = remaining_quantity * current_price
@@ -193,29 +196,34 @@ def validate_trading_hours() -> bool:
     
     return market_open <= now <= market_close
 
-def calculate_day_trade_count(transactions: List[TransactionLog], account_type: str = 'margin') -> int:
+def calculate_day_trade_count(transactions: List[Trade], account_type: str = 'margin') -> int:
     """Calculate number of day trades in the past 5 business days"""
     if account_type == 'cash':
         return 0  # Cash accounts don't have day trade restrictions
     
     # Get transactions from last 5 business days
     cutoff_date = datetime.now() - timedelta(days=7)  # Simplified
-    recent_transactions = [t for t in transactions if t.transaction_date >= cutoff_date]
+    recent_transactions = [t for t in transactions if t.executed_at >= cutoff_date]
     
     # Group by symbol and date
     daily_trades = {}
     for transaction in recent_transactions:
-        date_key = transaction.transaction_date.date()
-        symbol = transaction.symbol
+        date_key = transaction.executed_at.date()
+        # Get symbol through order->stock relationship
+        symbol = transaction.order.stock.symbol if transaction.order and transaction.order.stock else None
+        if not symbol:
+            continue
         
         if date_key not in daily_trades:
             daily_trades[date_key] = {}
         if symbol not in daily_trades[date_key]:
             daily_trades[date_key][symbol] = {'buys': 0, 'sells': 0}
         
-        if transaction.side == 'buy':
+        # Get side through order relationship
+        side = transaction.order.side if transaction.order else None
+        if side == 'buy':
             daily_trades[date_key][symbol]['buys'] += 1
-        else:
+        elif side == 'sell':
             daily_trades[date_key][symbol]['sells'] += 1
     
     # Count day trades (buy and sell of same symbol on same day)

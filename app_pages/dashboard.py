@@ -5,7 +5,7 @@ import plotly.express as px
 from datetime import datetime, timedelta
 
 from database.database import get_session
-from database.models import Stock, Order, TransactionLog, Account
+from database.models import Stock, Order, Trade, Account
 from services.data_fetcher import DataFetcher
 from services.broker_apis import BrokerManager
 from utils.helpers import format_currency, format_percentage, calculate_portfolio_value
@@ -134,8 +134,8 @@ def show_dashboard():
     session = get_session()
     try:
         # Get recent transactions
-        recent_transactions = session.query(TransactionLog)\
-            .order_by(TransactionLog.transaction_date.desc())\
+        recent_transactions = session.query(Trade)\
+            .order_by(Trade.executed_at.desc())\
             .limit(50).all()
         
         if recent_transactions:

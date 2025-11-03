@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 from database.database import get_session
-from database.models import Stock, Order, TransactionLog, PriorityCurrentPrice
+from database.models import Stock, Order, Trade, PriorityStock
 from services.technical_indicators import TechnicalIndicators
 from services.broker_apis import BrokerManager
 from utils.helpers import format_currency, format_percentage
@@ -182,7 +182,7 @@ def _show_stock_analysis(stock: Stock, session):
         st.subheader("Technical Indicators")
         
         # Get recent price data for indicators
-        recent_prices = session.query(PriorityCurrentPrice)\
+        recent_prices = session.query(PriorityStock)\
             .filter(PriorityCurrentPrice.stock_id == stock.id)\
             .order_by(PriorityCurrentPrice.datetime.desc())\
             .limit(50).all()
@@ -205,7 +205,7 @@ def _show_stock_analysis(stock: Stock, session):
 def _show_price_chart(stock: Stock, session):
     """Show price chart with technical analysis"""
     # Get historical price data
-    recent_prices = session.query(PriorityCurrentPrice)\
+    recent_prices = session.query(PriorityStock)\
         .filter(PriorityCurrentPrice.stock_id == stock.id)\
         .order_by(PriorityCurrentPrice.datetime.desc())\
         .limit(100).all()
@@ -260,7 +260,7 @@ def _show_price_chart(stock: Stock, session):
 def _show_trading_signals(stock: Stock, session):
     """Show trading signals and recommendations"""
     # Get recent technical data
-    recent_prices = session.query(PriorityCurrentPrice)\
+    recent_prices = session.query(PriorityStock)\
         .filter(PriorityCurrentPrice.stock_id == stock.id)\
         .order_by(PriorityCurrentPrice.datetime.desc())\
         .limit(20).all()
