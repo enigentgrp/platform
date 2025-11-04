@@ -5,6 +5,15 @@ Test script to verify Alpaca paper trading connection
 import os
 from services.broker_apis import AlpacaAPI, BrokerManager
 
+# Load environment variables from .env file (for local development)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # python-dotenv not installed (Replit environment uses built-in secrets)
+    pass
+
+
 def test_alpaca_connection():
     """Test the Alpaca API connection"""
     print("Testing Alpaca Paper Trading Connection...")
