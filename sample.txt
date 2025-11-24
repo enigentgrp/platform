@@ -1,0 +1,21 @@
+venvon
+cd "/mnt/chromeos/removable/My Passport/projects/AlgoTrade"
+# run your scripts
+python main.py   # or whatever entrypoint you use
+
+
+
+Workflow summary
+
+Plug in HDD
+
+Ensure it’s Shared with Linux
+
+Open terminal:
+
+source ~/venvs/algotrade/bin/activate
+cd "/mnt/chromeos/removable/Foundation/projects/AlgoTrade"
+python main.py
+
+
+When done, Deactivate and shut down Linux, then eject drive safely.
